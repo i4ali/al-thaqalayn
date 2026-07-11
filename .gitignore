@@ -1,0 +1,179 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+thaqalyn-env/
+venv/
+env/
+ENV/
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Generated Data Files
+generation.log
+validation_report_*.json
+
+# Temporary Files
+*.tmp
+*.temp
+nohup.out
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+!Icons/
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Xcode
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/*.xcworkspace
+*.xcworkspace/*
+!*.xcworkspace/contents.xcworkspacedata
+!*.xcworkspace/xcshareddata/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+timeline.xctimeline
+playground.xcworkspace
+.build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+xcuserdata/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.pins
+Package.resolved
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# CocoaPods
+Pods/
+*.xcworkspace/
+
+# Carthage
+Carthage/Build/
+
+# Logs
+*.log
+
+# Config 
+Thaqalayn/Config.swift 
+new_tafsir/
+tiktok_videos/
+verse_art/
+tiktok_videos/
+video_output/
+
+# Generated media output (root only — NOT scripts/ or tests/ source dirs)
+/tafsir_videos/
+/dhul_hijjah_carousel/
+/ads/
+
+# Design scratch / handoff mockups (throwaway)
+/design_handoff_*/
+
+# Screenshots (loose at root + screenshot dirs)
+/dhulhijjahscreen.png
+/simulator_screenshot_*.png
+/*-screenshots/
+
+# Stray/junk image accidentally dropped at repo root
+/8527d322-ee79-4a1c-bbeb-1be30da8f6cc.JPG
+
+# Superpowers brainstorm companion (local mockups)
+.superpowers/
+
+# Claude Code transient runtime
+.claude/scheduled_tasks.lock
+
+# ── Cleanup 2026-06-15: content/scratch, not app code ──
+
+# Playwright MCP runtime
+.playwright-mcp/
+
+# Scratch handoff files (mockup template, skill drafts)
+/files/
+
+# Stray media dropped at repo root
+/IMG_*.PNG
+/IMG_*.JPG
+/image.png
+/export_*.MOV
+
+# Separate "Shared Verse" video-channel project (not the app)
+/the_shared_verse/
+
+# Throwaway design mockups
+/docs/mockups/
+
+# Icon-redesign candidates / montages (throwaway)
+/scratch/
+
+# Onboarding-personalization design scratch (kept local, not committed)
+/docs/superpowers/plans/2026-06-14-onboarding-personalization.md
+/docs/superpowers/specs/2026-06-14-onboarding-personalization-design.md
+
+# Loose content/ad-generation scripts (one-off tooling)
+/scripts/assemble_ad.sh
+/scripts/build_aso_urdu.py
+/scripts/detect_green_quad.py
+/scripts/doodle_talk.py
+/scripts/make_notif_banner.py
+/scripts/nano_banana.py
+/scripts/normalize_doodle_stills.py
+/scripts/screen_composite.py
+/scripts/tts_eleven.py
+
+# Urdu ASO screenshots: keep the 6 final PNGs, ignore intermediates
+/AppStore_Screenshots/ASO/iphone-ur/assets/
+/AppStore_Screenshots/ASO/iphone-ur/captures/

@@ -1,0 +1,2091 @@
+//
+//  QuranModels.swift
+//  Thaqalayn
+//
+//  Data models for Quran and Tafsir content
+//
+
+import Foundation
+
+// MARK: - Quran Data Models
+
+struct QuranData: Codable {
+    let surahs: [Surah]
+    let verses: [String: [String: Verse]]
+}
+
+struct Surah: Codable, Identifiable {
+    let number: Int
+    let name: String
+    let englishName: String
+    let englishNameTranslation: String
+    let arabicName: String
+    let versesCount: Int
+    let revelationType: String
+    
+    var id: Int { number }
+    
+    // Audio-related computed properties
+    func audioURL(for reciter: Reciter) -> URL? {
+        // Use best available quality for each reciter (full surah audio)
+        let surahString = String(format: "%03d", number)
+        let urlString = "\(reciter.serverURL)/\(surahString).mp3"
+        return URL(string: urlString)
+    }
+}
+
+struct Verse: Codable {
+    let arabicText: String
+    let translation: String
+    /// Urdu translation (Allama Jawadi). Optional for backward compatibility with
+    /// any data that predates the translationUrdu field.
+    let translationUrdu: String?
+    let juz: Int
+    let manzil: Int
+    let page: Int
+    let ruku: Int
+    let hizbQuarter: Int
+    let sajda: SajdaInfo
+}
+
+extension VerseWithTafsir {
+    /// Verse translation for the given language. Only English and Urdu exist for
+    /// verse text; any other language falls back to the English translation.
+    func displayTranslation(for language: CommentaryLanguage) -> String {
+        if language == .urdu, let urdu = translationUrdu, !urdu.isEmpty {
+            return urdu
+        }
+        return translation
+    }
+
+    /// True when the displayed translation is the Urdu one (render RTL, Arabic-script font).
+    func usesUrduTranslation(for language: CommentaryLanguage) -> Bool {
+        language == .urdu && (translationUrdu?.isEmpty == false)
+    }
+}
+
+struct SajdaInfo: Codable {
+    let hasSajda: Bool
+    let id: Int?
+    let recommended: Bool?
+    
+    init(hasSajda: Bool, id: Int? = nil, recommended: Bool? = nil) {
+        self.hasSajda = hasSajda
+        self.id = id
+        self.recommended = recommended
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        
+        if let boolValue = try? container.decode(Bool.self) {
+            // Handle simple boolean case
+            self.hasSajda = boolValue
+            self.id = nil
+            self.recommended = nil
+        } else if let sajdaDict = try? container.decode([String: AnyCodable].self) {
+            // Handle object case
+            self.hasSajda = true
+            self.id = sajdaDict["id"]?.value as? Int
+            self.recommended = sajdaDict["recommended"]?.value as? Bool
+        } else {
+            throw DecodingError.typeMismatch(
+                SajdaInfo.self,
+                DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Expected Bool or Object for sajda")
+            )
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        if id != nil || recommended != nil {
+            var dict = [String: AnyCodable]()
+            if let id = id {
+                dict["id"] = AnyCodable(id)
+            }
+            if let recommended = recommended {
+                dict["recommended"] = AnyCodable(recommended)
+            }
+            try container.encode(dict)
+        } else {
+            try container.encode(hasSajda)
+        }
+    }
+}
+
+struct AnyCodable: Codable {
+    let value: Any
+    
+    init<T>(_ value: T?) {
+        self.value = value ?? ()
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        
+        if let intValue = try? container.decode(Int.self) {
+            value = intValue
+        } else if let doubleValue = try? container.decode(Double.self) {
+            value = doubleValue
+        } else if let stringValue = try? container.decode(String.self) {
+            value = stringValue
+        } else if let boolValue = try? container.decode(Bool.self) {
+            value = boolValue
+        } else {
+            value = ()
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        
+        if let intValue = value as? Int {
+            try container.encode(intValue)
+        } else if let doubleValue = value as? Double {
+            try container.encode(doubleValue)
+        } else if let stringValue = value as? String {
+            try container.encode(stringValue)
+        } else if let boolValue = value as? Bool {
+            try container.encode(boolValue)
+        }
+    }
+}
+
+// MARK: - Quick Overview Models
+
+/// Position hint for concept bubble placement around Arabic verse
+enum ConceptPosition: String, Codable, CaseIterable {
+    case topLeft = "topLeft"
+    case topRight = "topRight"
+    case bottomLeft = "bottomLeft"
+    case bottomRight = "bottomRight"
+}
+
+/// Represents a key concept extracted from verse tafsir for interactive display
+struct VerseConcept: Codable, Identifiable {
+    let id: String                    // Unique identifier (e.g., "1:1:divine-mercy")
+    let title: String                 // Display title (e.g., "Divine Mercy")
+    let icon: String                  // SF Symbol name (e.g., "heart.fill")
+    let colorHex: String              // Hex color for bubble (e.g., "#E8B86D")
+    let coreInsight: String           // 1-2 sentence explanation
+    let whyItMatters: String          // Practical significance
+    let position: ConceptPosition     // Position around Arabic text
+    let arabicHighlight: String?      // Arabic word(s) to highlight in the verse
+
+    // Multilingual support
+    let title_urdu: String?
+    let coreInsight_urdu: String?
+    let whyItMatters_urdu: String?
+    let title_ar: String?
+    let coreInsight_ar: String?
+    let whyItMatters_ar: String?
+
+    /// Get localized title for specified language
+    func getTitle(language: CommentaryLanguage) -> String {
+        switch language {
+        case .english, .french: return title
+        case .urdu: return title_urdu ?? title
+        case .arabic: return title_ar ?? title
+        }
+    }
+
+    /// Get localized core insight for specified language
+    func getCoreInsight(language: CommentaryLanguage) -> String {
+        switch language {
+        case .english, .french: return coreInsight
+        case .urdu: return coreInsight_urdu ?? coreInsight
+        case .arabic: return coreInsight_ar ?? coreInsight
+        }
+    }
+
+    /// Get localized why it matters for specified language
+    func getWhyItMatters(language: CommentaryLanguage) -> String {
+        switch language {
+        case .english, .french: return whyItMatters
+        case .urdu: return whyItMatters_urdu ?? whyItMatters
+        case .arabic: return whyItMatters_ar ?? whyItMatters
+        }
+    }
+}
+
+/// Complete Quick Overview data for a verse
+struct QuickOverviewData: Codable {
+    let concepts: [VerseConcept]      // 3-4 key concepts
+}
+
+// MARK: - Tafsir Data Models
+
+struct TafsirData: Codable {
+    let verses: [String: TafsirVerse]
+}
+
+struct TafsirVerse: Codable {
+    // Existing English content
+    let layer1: String
+    let layer2: String
+    let layer3: String
+    let layer4: String
+    let layer5: String?
+
+    // Urdu content (optional for backward compatibility)
+    let layer1_urdu: String?
+    let layer2_urdu: String?
+    let layer3_urdu: String?
+    let layer4_urdu: String?
+    let layer5_urdu: String?
+
+    // Arabic content (optional)
+    let layer1_ar: String?
+    let layer2_ar: String?
+    let layer3_ar: String?
+    let layer4_ar: String?
+    let layer5_ar: String?
+
+    // French content (optional)
+    let layer1_fr: String?
+    let layer2_fr: String?
+    let layer3_fr: String?
+    let layer4_fr: String?
+    let layer5_fr: String?
+
+    // Short versions for Overview feature (optional)
+    let layer2short: String?
+    let layer2short_urdu: String?
+    let layer2short_ar: String?
+    let layer2short_fr: String?
+
+    // Quick Overview data for interactive concept display (optional)
+    let quickOverview: QuickOverviewData?
+
+    // Helper method to get content by language and layer
+    func content(for layer: TafsirLayer, language: CommentaryLanguage) -> String {
+        switch (layer, language) {
+        case (.foundation, .english): return layer1
+        case (.foundation, .urdu): return layer1_urdu ?? layer1
+        case (.foundation, .arabic): return layer1_ar ?? layer1
+        case (.foundation, .french): return layer1_fr ?? layer1
+        case (.classical, .english): return layer2
+        case (.classical, .urdu): return layer2_urdu ?? layer2
+        case (.classical, .arabic): return layer2_ar ?? layer2
+        case (.classical, .french): return layer2_fr ?? layer2
+        case (.contemporary, .english): return layer3
+        case (.contemporary, .urdu): return layer3_urdu ?? layer3
+        case (.contemporary, .arabic): return layer3_ar ?? layer3
+        case (.contemporary, .french): return layer3_fr ?? layer3
+        case (.ahlulBayt, .english): return layer4
+        case (.ahlulBayt, .urdu): return layer4_urdu ?? layer4
+        case (.ahlulBayt, .arabic): return layer4_ar ?? layer4
+        case (.ahlulBayt, .french): return layer4_fr ?? layer4
+        case (.comparative, .english): return layer5 ?? ""
+        case (.comparative, .urdu): return layer5_urdu ?? layer5 ?? ""
+        case (.comparative, .arabic): return layer5_ar ?? layer5 ?? ""
+        case (.comparative, .french): return layer5_fr ?? layer5 ?? ""
+        }
+    }
+
+    // Generic method to check if content exists for a specific language and layer
+    func hasContent(for layer: TafsirLayer, language: CommentaryLanguage) -> Bool {
+        switch (layer, language) {
+        case (.foundation, .english): return true
+        case (.foundation, .urdu): return layer1_urdu != nil
+        case (.foundation, .arabic): return layer1_ar != nil
+        case (.foundation, .french): return layer1_fr != nil
+        case (.classical, .english): return true
+        case (.classical, .urdu): return layer2_urdu != nil
+        case (.classical, .arabic): return layer2_ar != nil
+        case (.classical, .french): return layer2_fr != nil
+        case (.contemporary, .english): return true
+        case (.contemporary, .urdu): return layer3_urdu != nil
+        case (.contemporary, .arabic): return layer3_ar != nil
+        case (.contemporary, .french): return layer3_fr != nil
+        case (.ahlulBayt, .english): return true
+        case (.ahlulBayt, .urdu): return layer4_urdu != nil
+        case (.ahlulBayt, .arabic): return layer4_ar != nil
+        case (.ahlulBayt, .french): return layer4_fr != nil
+        case (.comparative, .english): return layer5 != nil
+        case (.comparative, .urdu): return layer5_urdu != nil
+        case (.comparative, .arabic): return layer5_ar != nil
+        case (.comparative, .french): return layer5_fr != nil
+        }
+    }
+
+    // Legacy method for backward compatibility
+    func hasUrduContent(for layer: TafsirLayer) -> Bool {
+        return hasContent(for: layer, language: .urdu)
+    }
+
+    // Helper method to get layer2 content by language for overview
+    func getLayer2(language: CommentaryLanguage) -> String {
+        switch language {
+        case .english: return layer2
+        case .urdu: return layer2_urdu ?? layer2
+        case .arabic: return layer2_ar ?? layer2
+        case .french: return layer2_fr ?? layer2
+        }
+    }
+
+    // Helper method to get layer2short content by language for overview
+    func getLayer2Short(language: CommentaryLanguage) -> String {
+        switch language {
+        case .english: return layer2short ?? layer2
+        case .urdu: return layer2short_urdu ?? layer2_urdu ?? layer2
+        case .arabic: return layer2short_ar ?? layer2_ar ?? layer2
+        case .french: return layer2short_fr ?? layer2_fr ?? layer2
+        }
+    }
+
+    // Layer2 always exists (required field)
+    var hasLayer2: Bool {
+        return true
+    }
+}
+
+// MARK: - Display Models
+
+struct SurahWithTafsir: Identifiable {
+    let id: Int
+    let surah: Surah
+    let verses: [VerseWithTafsir]
+    
+    init(surah: Surah, verses: [VerseWithTafsir]) {
+        self.id = surah.number
+        self.surah = surah
+        self.verses = verses
+    }
+}
+
+struct VerseWithTafsir: Identifiable {
+    let id: String
+    let number: Int
+    let arabicText: String
+    let translation: String
+    let translationUrdu: String?
+    let sajda: SajdaInfo
+    let tafsir: TafsirVerse?
+    
+    var bookmarkKey: String {
+        return id
+    }
+    
+    // Audio-related computed properties
+    func audioURL(for surahNumber: Int, reciter: Reciter) -> URL? {
+        let surahString = String(format: "%03d", surahNumber)
+        let verseString = String(format: "%03d", number)
+        
+        // Use EveryAyah.com for individual verse audio with best available quality for each reciter
+        switch reciter.id {
+        case "mishary_rashid_alafasy":
+            // Use highest available quality (128kbps)
+            let urlString = "https://www.everyayah.com/data/Alafasy_128kbps/\(surahString)\(verseString).mp3"
+            return URL(string: urlString)
+            
+        case "abdul_rahman_al_sudais":
+            // Use highest available quality (192kbps)
+            let urlString = "https://www.everyayah.com/data/Abdurrahmaan_As-Sudais_192kbps/\(surahString)\(verseString).mp3"
+            return URL(string: urlString)
+            
+        case "saad_al_ghamidi":
+            // Only 40kbps available for Ghamadi
+            let urlString = "https://www.everyayah.com/data/Ghamadi_40kbps/\(surahString)\(verseString).mp3"
+            return URL(string: urlString)
+            
+        case "ahmad_ibn_ali_al_ajamy":
+            // Use highest available quality (128kbps)
+            let urlString = "https://www.everyayah.com/data/ahmed_ibn_ali_al_ajamy_128kbps/\(surahString)\(verseString).mp3"
+            return URL(string: urlString)
+            
+        case "maher_al_muaiqly":
+            // Use highest available quality (128kbps)
+            let urlString = "https://www.everyayah.com/data/MaherAlMuaiqly128kbps/\(surahString)\(verseString).mp3"
+            return URL(string: urlString)
+            
+        case "yasser_al_dosari":
+            // Only 128kbps available for Yasser Ad-Dussary
+            let urlString = "https://www.everyayah.com/data/Yasser_Ad-Dussary_128kbps/\(surahString)\(verseString).mp3"
+            return URL(string: urlString)
+            
+        default:
+            // Fall back to full surah audio for other reciters
+            let surahOnlyString = String(format: "%03d", surahNumber)
+            let urlString = "\(reciter.serverURL)/\(surahOnlyString).mp3"
+            return URL(string: urlString)
+        }
+    }
+    
+    init(number: Int, verse: Verse, tafsir: TafsirVerse? = nil) {
+        self.id = "\(number)"
+        self.number = number
+        self.arabicText = verse.arabicText
+        self.translation = verse.translation
+        self.translationUrdu = verse.translationUrdu
+        self.sajda = verse.sajda
+        self.tafsir = tafsir
+    }
+}
+
+// MARK: - Bookmark Models
+
+struct Bookmark: Codable, Identifiable {
+    let id: UUID
+    let userId: String
+    let surahNumber: Int
+    let verseNumber: Int
+    let surahName: String
+    let verseText: String
+    let verseTranslation: String
+    let notes: String?
+    let tags: [String]
+    let createdAt: Date
+    let updatedAt: Date
+    let syncStatus: BookmarkSyncStatus
+    
+    var verseReference: String {
+        return "\(surahNumber):\(verseNumber)"
+    }
+    
+    init(
+        id: UUID = UUID(),
+        userId: String,
+        surahNumber: Int,
+        verseNumber: Int,
+        surahName: String,
+        verseText: String,
+        verseTranslation: String,
+        notes: String? = nil,
+        tags: [String] = [],
+        createdAt: Date = Date(),
+        updatedAt: Date = Date(),
+        syncStatus: BookmarkSyncStatus = .synced
+    ) {
+        self.id = id
+        self.userId = userId
+        self.surahNumber = surahNumber
+        self.verseNumber = verseNumber
+        self.surahName = surahName
+        self.verseText = verseText
+        self.verseTranslation = verseTranslation
+        self.notes = notes
+        self.tags = tags
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.syncStatus = syncStatus
+    }
+}
+
+enum BookmarkSyncStatus: String, Codable {
+    case synced = "synced"
+    case pendingSync = "pending_sync"
+    case pendingDelete = "pending_delete"
+    case conflict = "conflict"
+}
+
+struct BookmarkCollection: Codable, Identifiable {
+    let id: UUID
+    let userId: String
+    let name: String
+    let description: String?
+    let bookmarkIds: [UUID]
+    let createdAt: Date
+    let updatedAt: Date
+    
+    init(
+        id: UUID = UUID(),
+        userId: String,
+        name: String,
+        description: String? = nil,
+        bookmarkIds: [UUID] = [],
+        createdAt: Date = Date(),
+        updatedAt: Date = Date()
+    ) {
+        self.id = id
+        self.userId = userId
+        self.name = name
+        self.description = description
+        self.bookmarkIds = bookmarkIds
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+struct UserBookmarkPreferences: Codable {
+    let userId: String
+    let isPremium: Bool
+    let bookmarkLimit: Int
+    let defaultTags: [String]
+    let sortOrder: BookmarkSortOrder
+    let groupBy: BookmarkGroupBy
+    
+    init(
+        userId: String,
+        isPremium: Bool = false,
+        bookmarkLimit: Int = 10,
+        defaultTags: [String] = [],
+        sortOrder: BookmarkSortOrder = .dateDescending,
+        groupBy: BookmarkGroupBy = .none
+    ) {
+        self.userId = userId
+        self.isPremium = isPremium
+        self.bookmarkLimit = 10 // Standard limit for all users
+        self.defaultTags = defaultTags
+        self.sortOrder = sortOrder
+        self.groupBy = groupBy
+    }
+}
+
+enum BookmarkSortOrder: String, Codable, CaseIterable {
+    case dateAscending = "date_asc"
+    case dateDescending = "date_desc"
+    case surahOrder = "surah_order"
+    case alphabetical = "alphabetical"
+    
+    var title: String {
+        switch self {
+        case .dateAscending: return "Oldest First"
+        case .dateDescending: return "Newest First"
+        case .surahOrder: return "Quran Order"
+        case .alphabetical: return "Alphabetical"
+        }
+    }
+}
+
+enum BookmarkGroupBy: String, Codable, CaseIterable {
+    case none = "none"
+    case surah = "surah"
+    case tags = "tags"
+    case date = "date"
+    
+    var title: String {
+        switch self {
+        case .none: return "No Grouping"
+        case .surah: return "By Surah"
+        case .tags: return "By Tags"
+        case .date: return "By Date"
+        }
+    }
+}
+
+// MARK: - Tafsir Layer Types
+
+enum TafsirLayer: String, CaseIterable {
+    case foundation = "layer1"
+    case classical = "layer2"
+    case contemporary = "layer3"
+    case ahlulBayt = "layer4"
+    case comparative = "layer5"
+    
+    var title: String {
+        switch self {
+        case .foundation:
+            return "Foundation"
+        case .classical:
+            return "Classical Shia"
+        case .contemporary:
+            return "Contemporary"
+        case .ahlulBayt:
+            return "Ahlul Bayt"
+        case .comparative:
+            return "Comparative"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .foundation:
+            return "Simple explanations, historical context, contemporary relevance"
+        case .classical:
+            return "Tabatabai, Tabrisi, traditional scholarly consensus"
+        case .contemporary:
+            return "Modern scholars, scientific insights, social justice themes"
+        case .ahlulBayt:
+            return "Hadith from Imams, theological concepts, spiritual guidance"
+        case .comparative:
+            return "Shia vs Sunni scholarly perspectives"
+        }
+    }
+
+    /// Check if this layer is free for a given surah
+    /// - Surah 1: Layers 1 & 2 are free
+    /// - All other surahs: No free layers
+    func isFree(forSurah surahNumber: Int) -> Bool {
+        if surahNumber == 1 {
+            return self == .foundation || self == .classical
+        }
+        return false
+    }
+}
+
+// MARK: - Commentary Language Support
+
+enum CommentaryLanguage: String, CaseIterable, Codable {
+    case english = "en"
+    case urdu = "ur"
+    case arabic = "ar"
+    case french = "fr"
+
+    /// Languages that have tafsir content available (excludes French)
+    static let supportedTafsirLanguages: [CommentaryLanguage] = [.english, .urdu, .arabic]
+
+    var displayName: String {
+        switch self {
+        case .english: return "English"
+        case .urdu: return "اردو"
+        case .arabic: return "العربية"
+        case .french: return "Français"
+        }
+    }
+
+    /// Compact 2-letter code for tight UI like the reader's language pill,
+    /// where the full display name collides with the centered header title.
+    var shortCode: String {
+        switch self {
+        case .english: return "EN"
+        case .urdu: return "UR"
+        case .arabic: return "AR"
+        case .french: return "FR"
+        }
+    }
+
+    var isRTL: Bool {
+        return self == .urdu || self == .arabic
+    }
+
+    /// Language code for NLLB translation model
+    var nllbCode: String {
+        switch self {
+        case .english: return "eng_Latn"
+        case .urdu: return "urd_Arab"
+        case .arabic: return "arb_Arab"
+        case .french: return "fra_Latn"
+        }
+    }
+}
+
+// MARK: - Daily Verse Notification Models
+
+struct IslamicMonthVerseData: Codable {
+    let months: [IslamicMonth]
+}
+
+struct IslamicMonth: Codable {
+    let month: Int
+    let name: String
+    let arabicName: String
+    let theme: String
+    let significance: String
+    let verses: [DailyVerseEntry]
+}
+
+struct DailyVerseEntry: Codable, Identifiable {
+    let surah: Int
+    let verse: Int
+    let relevance: String
+    let theme: String
+
+    var id: String {
+        return "\(surah):\(verse)"
+    }
+}
+
+struct NotificationPreferences: Codable {
+    var enabled: Bool
+    var time: Date
+    var language: CommentaryLanguage
+    var includeTafsir: Bool
+
+    init(
+        enabled: Bool = false,
+        time: Date = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date(),
+        language: CommentaryLanguage = .english,
+        includeTafsir: Bool = true
+    ) {
+        self.enabled = enabled
+        self.time = time
+        self.language = language
+        self.includeTafsir = includeTafsir
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case enabled, time, language, includeTafsir
+    }
+}
+
+// MARK: - Progress Tracking Models
+
+struct VerseProgress: Codable, Identifiable {
+    let id: UUID
+    let surahNumber: Int
+    let verseNumber: Int
+    let readDate: Date
+    let isRead: Bool
+
+    var verseKey: String {
+        return "\(surahNumber):\(verseNumber)"
+    }
+
+    init(
+        id: UUID = UUID(),
+        surahNumber: Int,
+        verseNumber: Int,
+        readDate: Date = Date(),
+        isRead: Bool = true
+    ) {
+        self.id = id
+        self.surahNumber = surahNumber
+        self.verseNumber = verseNumber
+        self.readDate = readDate
+        self.isRead = isRead
+    }
+}
+
+// MARK: - Today Tab Models
+
+struct DailyMessage: Codable, Identifiable {
+    let id: Int               // stable index in JSON
+    let arabic: String?       // optional; some entries are translation-only
+    let english: String       // headline (curly-quoted at render time)
+    let surah: Int
+    let verse: Int
+}
+
+struct DailyMessagesData: Codable {
+    let messages: [DailyMessage]
+}
+
+struct LastReadInfo {
+    let surahNumber: Int
+    let verseNumber: Int
+    let progress: Double      // 0…1 within that surah
+    let updatedAt: Date
+}
+
+struct ReadingStreak: Codable {
+    var currentStreak: Int
+    var longestStreak: Int
+    var lastReadDate: Date?
+    var streakStartDate: Date?
+
+    init(
+        currentStreak: Int = 0,
+        longestStreak: Int = 0,
+        lastReadDate: Date? = nil,
+        streakStartDate: Date? = nil
+    ) {
+        self.currentStreak = currentStreak
+        self.longestStreak = longestStreak
+        self.lastReadDate = lastReadDate
+        self.streakStartDate = streakStartDate
+    }
+}
+
+struct BadgeAward: Codable, Identifiable {
+    let id: UUID
+    let surahNumber: Int
+    let surahName: String
+    let arabicName: String
+    let awardedDate: Date
+    let badgeType: BadgeType
+
+    init(
+        id: UUID = UUID(),
+        surahNumber: Int,
+        surahName: String,
+        arabicName: String,
+        awardedDate: Date = Date(),
+        badgeType: BadgeType = .surahCompletion
+    ) {
+        self.id = id
+        self.surahNumber = surahNumber
+        self.surahName = surahName
+        self.arabicName = arabicName
+        self.awardedDate = awardedDate
+        self.badgeType = badgeType
+    }
+}
+
+enum BadgeType: String, Codable {
+    case surahCompletion = "surah_completion"
+    case milestone10 = "milestone_10"
+    case milestone25 = "milestone_25"
+    case milestone50 = "milestone_50"
+    case allSurahs = "all_surahs"
+    case streak7 = "streak_7"
+    case streak30 = "streak_30"
+    case streak100 = "streak_100"
+    case ramadanCompletion = "ramadan_completion"
+    case hajjCompletion = "hajj_completion"
+    case dailyChallengeFirst = "daily_challenge_first"
+    case dailyChallengeStreak7 = "daily_challenge_streak_7"
+    case dailyChallengeStreak30 = "daily_challenge_streak_30"
+    case dailyChallengeStreak100 = "daily_challenge_streak_100"
+    case crosswordFirst = "crossword_first"
+    case crossword7 = "crossword_7"
+    case crossword30 = "crossword_30"
+    case crossword100 = "crossword_100"
+
+    var title: String {
+        switch self {
+        case .surahCompletion: return "Khatm Surah"
+        case .milestone10: return "Mubtadi"
+        case .milestone25: return "Salik"
+        case .milestone50: return "Murid"
+        case .allSurahs: return "Waliy Allah"
+        case .streak7: return "Mu'min Mutaqin"
+        case .streak30: return "Sahib al-Wird"
+        case .streak100: return "Mukhlis"
+        case .ramadanCompletion: return "Ramadan Champion"
+        case .hajjCompletion: return "Hajj Champion"
+        case .dailyChallengeFirst: return "First Challenge"
+        case .dailyChallengeStreak7: return "7-Day Challenge Streak"
+        case .dailyChallengeStreak30: return "30-Day Challenge Streak"
+        case .dailyChallengeStreak100: return "100-Day Challenge Streak"
+        case .crosswordFirst: return "First Crossword"
+        case .crossword7: return "Crossword Adept"
+        case .crossword30: return "Crossword Devotee"
+        case .crossword100: return "Crossword Master"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .surahCompletion: return "ختم السورة"
+        case .milestone10: return "المبتدئ"
+        case .milestone25: return "السالك"
+        case .milestone50: return "المريد"
+        case .allSurahs: return "ولي الله"
+        case .streak7: return "مؤمن متقين"
+        case .streak30: return "صاحب الورد"
+        case .streak100: return "المخلص"
+        case .ramadanCompletion: return "بطل رمضان"
+        case .hajjCompletion: return "بطل الحج"
+        case .dailyChallengeFirst: return "أول تحدٍّ يومي"
+        case .dailyChallengeStreak7: return "سلسلة التحدي ٧ أيام"
+        case .dailyChallengeStreak30: return "سلسلة التحدي ٣٠ يوماً"
+        case .dailyChallengeStreak100: return "سلسلة التحدي ١٠٠ يوم"
+        case .crosswordFirst: return "أول كلمات متقاطعة"
+        case .crossword7: return "سلسلة الكلمات ٧ أيام"
+        case .crossword30: return "سلسلة الكلمات ٣٠ يوماً"
+        case .crossword100: return "سلسلة الكلمات ١٠٠ يوم"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .surahCompletion: return "checkmark.seal.fill"
+        case .milestone10: return "book.closed.fill"
+        case .milestone25: return "star.fill"
+        case .milestone50: return "sparkles"
+        case .allSurahs: return "star.circle.fill"
+        case .streak7: return "flame.fill"
+        case .streak30: return "sparkles"
+        case .streak100: return "crown.fill"
+        case .ramadanCompletion: return "moon.stars.fill"
+        case .hajjCompletion: return "building.columns.fill"
+        case .dailyChallengeFirst: return "brain.head.profile"
+        case .dailyChallengeStreak7: return "flame.fill"
+        case .dailyChallengeStreak30: return "bolt.fill"
+        case .dailyChallengeStreak100: return "crown.fill"
+        case .crosswordFirst: return "square.grid.3x3.fill"
+        case .crossword7: return "flame.fill"
+        case .crossword30: return "bolt.fill"
+        case .crossword100: return "crown.fill"
+        }
+    }
+
+    var color: String {
+        switch self {
+        case .surahCompletion: return "green"
+        case .milestone10: return "blue"
+        case .milestone25: return "purple"
+        case .milestone50: return "orange"
+        case .allSurahs: return "gold"
+        case .streak7: return "orange"
+        case .streak30: return "green"
+        case .streak100: return "purple"
+        case .ramadanCompletion: return "gold"
+        case .hajjCompletion: return "gold"
+        case .dailyChallengeFirst: return "blue"
+        case .dailyChallengeStreak7: return "orange"
+        case .dailyChallengeStreak30: return "green"
+        case .dailyChallengeStreak100: return "purple"
+        case .crosswordFirst: return "blue"
+        case .crossword7: return "orange"
+        case .crossword30: return "green"
+        case .crossword100: return "purple"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .surahCompletion:
+            return "Completed a surah of the Noble Quran"
+        case .milestone10:
+            return "The Beginner - Completed 10 surahs on your journey"
+        case .milestone25:
+            return "The Traveler - Completed 25 surahs on the spiritual path"
+        case .milestone50:
+            return "The Dedicated Student - Reached the halfway mark with 50 surahs"
+        case .allSurahs:
+            return "Friend of Allah - Completed all 114 surahs of the Quran"
+        case .streak7:
+            return "Consistent Believer - Maintained 7 days of steadfast reading"
+        case .streak30:
+            return "Keeper of Daily Portion - 30 days of unwavering commitment"
+        case .streak100:
+            return "The Devoted One - 100 days of dedicated spiritual practice"
+        case .ramadanCompletion:
+            return "Completed the entire 30-day Ramadan Journey"
+        case .hajjCompletion:
+            return "Completed the entire 10-day Dhul-Hijjah Journey"
+        case .dailyChallengeFirst:
+            return "Completed your first Daily Challenge"
+        case .dailyChallengeStreak7:
+            return "Completed Daily Challenges for 7 days in a row"
+        case .dailyChallengeStreak30:
+            return "Completed Daily Challenges for 30 days in a row"
+        case .dailyChallengeStreak100:
+            return "Completed Daily Challenges for 100 days in a row"
+        case .crosswordFirst:
+            return "Completed your first Daily Crossword"
+        case .crossword7:
+            return "Completed Daily Crosswords for 7 days in a row"
+        case .crossword30:
+            return "Completed Daily Crosswords for 30 days in a row"
+        case .crossword100:
+            return "Completed Daily Crosswords for 100 days in a row"
+        }
+    }
+
+    var sawabValue: Int {
+        switch self {
+        case .surahCompletion: return 100
+        case .milestone10: return 1000
+        case .milestone25: return 2500
+        case .milestone50: return 5000
+        case .allSurahs: return 11400
+        case .streak7: return 700
+        case .streak30: return 3000
+        case .streak100: return 10000
+        case .ramadanCompletion: return 500
+        case .hajjCompletion: return 500
+        case .dailyChallengeFirst: return 50
+        case .dailyChallengeStreak7: return 150
+        case .dailyChallengeStreak30: return 600
+        case .dailyChallengeStreak100: return 2500
+        case .crosswordFirst: return 50
+        case .crossword7: return 150
+        case .crossword30: return 600
+        case .crossword100: return 2500
+        }
+    }
+
+    var hadith: String? {
+        switch self {
+        case .surahCompletion:
+            return "Whoever recites a letter from the Book of Allah will be credited with a good deed, and a good deed is multiplied into ten. - Prophet Muhammad (PBUH)"
+        case .allSurahs:
+            return "The best among you are those who learn the Quran and teach it. - Prophet Muhammad (PBUH)"
+        case .streak7, .streak30, .streak100:
+            return "Make a habit of doing good deeds, for the most beloved deed to Allah is the most regular one, even if it is small. - Imam Ali (AS)"
+        case .ramadanCompletion:
+            return "Whoever fasts Ramadan out of faith and seeking reward, his previous sins will be forgiven. - Prophet Muhammad (PBUH)"
+        case .hajjCompletion:
+            return "There are no days in which righteous deeds are more beloved to Allah than these ten days. - Prophet Muhammad (PBUH)"
+        case .dailyChallengeFirst, .dailyChallengeStreak7, .dailyChallengeStreak30, .dailyChallengeStreak100:
+            return "Seek knowledge from the cradle to the grave. - Prophet Muhammad (PBUH)"
+        default:
+            return nil
+        }
+    }
+}
+
+struct ProgressStats: Codable {
+    var totalVersesRead: Int
+    var totalSurahsCompleted: Int
+    var currentStreak: Int
+    var longestStreak: Int
+    var versesReadToday: Int
+    var lastReadDate: Date?
+    var startDate: Date
+    var totalSawab: Int  // Total sawab (spiritual rewards) earned
+
+    init(
+        totalVersesRead: Int = 0,
+        totalSurahsCompleted: Int = 0,
+        currentStreak: Int = 0,
+        longestStreak: Int = 0,
+        versesReadToday: Int = 0,
+        lastReadDate: Date? = nil,
+        startDate: Date = Date(),
+        totalSawab: Int = 0
+    ) {
+        self.totalVersesRead = totalVersesRead
+        self.totalSurahsCompleted = totalSurahsCompleted
+        self.currentStreak = currentStreak
+        self.longestStreak = longestStreak
+        self.versesReadToday = versesReadToday
+        self.lastReadDate = lastReadDate
+        self.startDate = startDate
+        self.totalSawab = totalSawab
+    }
+}
+
+struct ProgressPreferences: Codable {
+    var notificationsEnabled: Bool
+    var celebrationsEnabled: Bool
+    var showStreakInHeader: Bool
+
+    init(
+        notificationsEnabled: Bool = true,
+        celebrationsEnabled: Bool = true,
+        showStreakInHeader: Bool = true
+    ) {
+        self.notificationsEnabled = notificationsEnabled
+        self.celebrationsEnabled = celebrationsEnabled
+        self.showStreakInHeader = showStreakInHeader
+    }
+}
+
+// MARK: - Reading Progress Sync Models
+
+/// Container for all reading progress data with sync support
+struct ReadingProgressData: Codable {
+    var verseProgress: [VerseProgress]
+    var readingStreak: ReadingStreak
+    var badges: [BadgeAward]
+    var stats: ProgressStats
+    var preferences: ProgressPreferences
+    var updatedAt: Date
+    var syncStatus: ProgressSyncStatus
+
+    init(
+        verseProgress: [VerseProgress] = [],
+        readingStreak: ReadingStreak = ReadingStreak(),
+        badges: [BadgeAward] = [],
+        stats: ProgressStats = ProgressStats(),
+        preferences: ProgressPreferences = ProgressPreferences(),
+        updatedAt: Date = Date(),
+        syncStatus: ProgressSyncStatus = .synced
+    ) {
+        self.verseProgress = verseProgress
+        self.readingStreak = readingStreak
+        self.badges = badges
+        self.stats = stats
+        self.preferences = preferences
+        self.updatedAt = updatedAt
+        self.syncStatus = syncStatus
+    }
+}
+
+enum ProgressSyncStatus: String, Codable {
+    case synced = "synced"
+    case pendingSync = "pending_sync"
+    case conflict = "conflict"
+}
+
+/// Database model for Supabase reading_progress table
+struct DatabaseReadingProgress: Codable {
+    let userId: String
+    let verseProgress: [VerseProgress]
+    let readingStreak: ReadingStreak
+    let badges: [BadgeAward]
+    let stats: ProgressStats
+    let preferences: ProgressPreferences
+    let updatedAt: Date
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case verseProgress = "verse_progress"
+        case readingStreak = "reading_streak"
+        case badges
+        case stats
+        case preferences
+        case updatedAt = "updated_at"
+        case createdAt = "created_at"
+    }
+
+    init(
+        userId: String,
+        verseProgress: [VerseProgress] = [],
+        readingStreak: ReadingStreak = ReadingStreak(),
+        badges: [BadgeAward] = [],
+        stats: ProgressStats = ProgressStats(),
+        preferences: ProgressPreferences = ProgressPreferences(),
+        updatedAt: Date = Date(),
+        createdAt: Date = Date()
+    ) {
+        self.userId = userId
+        self.verseProgress = verseProgress
+        self.readingStreak = readingStreak
+        self.badges = badges
+        self.stats = stats
+        self.preferences = preferences
+        self.updatedAt = updatedAt
+        self.createdAt = createdAt
+    }
+}
+
+// MARK: - Prophetic Parallels Models
+
+struct PropheticParallelsData: Codable {
+    let parallels: [PropheticParallel]
+}
+
+struct PropheticParallel: Codable, Identifiable {
+    let id: String
+    let situationEn: String
+    let situationAr: String
+    let situationUr: String
+    let category: ParallelCategory
+    let prophetEn: String              // "Yunus (Jonah)"
+    let prophetAr: String
+    let prophetUr: String
+    let connectionEn: String
+    let connectionAr: String
+    let connectionUr: String
+    let comfortMessageEn: String
+    let comfortMessageAr: String
+    let comfortMessageUr: String
+    let storySummaryEn: String
+    let storySummaryAr: String
+    let storySummaryUr: String
+    let verses: [ParallelVerse]        // 2-3 key verses
+    let relatedStoryId: String?        // Links to PropheticStory.id
+    let icon: String                   // SF Symbol name
+    /// One narration from the Ahlul Bayt (ʿa) about this parallel's prophet. Optional so
+    /// parallels without one still decode.
+    let narration: AhlulBaytNarration?
+
+    func situation(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return situationAr
+        case .urdu:   return situationUr
+        default:      return situationEn
+        }
+    }
+
+    func prophet(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return prophetAr
+        case .urdu:   return prophetUr
+        default:      return prophetEn
+        }
+    }
+
+    func connection(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return connectionAr
+        case .urdu:   return connectionUr
+        default:      return connectionEn
+        }
+    }
+
+    func comfortMessage(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return comfortMessageAr
+        case .urdu:   return comfortMessageUr
+        default:      return comfortMessageEn
+        }
+    }
+
+    func storySummary(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return storySummaryAr
+        case .urdu:   return storySummaryUr
+        default:      return storySummaryEn
+        }
+    }
+}
+
+struct ParallelVerse: Codable {
+    let surahNumber: Int
+    let verseNumber: Int
+    let relevanceNoteEn: String
+    let relevanceNoteAr: String
+    let relevanceNoteUr: String
+
+    var verseReference: String {
+        "Quran \(surahNumber):\(verseNumber)"
+    }
+
+    func relevanceNote(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return relevanceNoteAr
+        case .urdu:   return relevanceNoteUr
+        default:      return relevanceNoteEn
+        }
+    }
+}
+
+enum ParallelCategory: String, Codable, CaseIterable {
+    case emotionalStruggles = "emotional_struggles"
+    case familyChallenges = "family_challenges"
+    case faithTests = "faith_tests"
+    case worldlyPressures = "worldly_pressures"
+    case isolation = "isolation"
+    case persecution = "persecution"
+
+    var displayName: String {
+        switch self {
+        case .emotionalStruggles: return "Emotional Struggles"
+        case .familyChallenges: return "Family Challenges"
+        case .faithTests: return "Tests of Faith"
+        case .worldlyPressures: return "Worldly Pressures"
+        case .isolation: return "Isolation & Loneliness"
+        case .persecution: return "Persecution & Opposition"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .emotionalStruggles: return "heart.slash.fill"
+        case .familyChallenges: return "house.fill"
+        case .faithTests: return "flame.fill"
+        case .worldlyPressures: return "globe.americas.fill"
+        case .isolation: return "person.fill.questionmark"
+        case .persecution: return "shield.slash.fill"
+        }
+    }
+}
+
+// MARK: - Life Moments Models
+
+struct LifeMomentsData: Codable {
+    let moments: [LifeMoment]
+}
+
+struct LifeMoment: Codable, Identifiable {
+    let id: String
+    let situationEn: String
+    let situationAr: String
+    let situationUr: String
+    let surahNumber: Int
+    let verseNumber: Int
+    let category: String
+    /// Optional id of a Daily Dua (see daily_duas.json) linked to this moment.
+    let duaId: String?
+
+    var verseReference: String {
+        return "Quran \(surahNumber):\(verseNumber)"
+    }
+
+    func situation(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return situationAr
+        case .urdu:   return situationUr
+        default:      return situationEn
+        }
+    }
+
+    var categoryIcon: String {
+        switch category.lowercased() {
+        case "emotional": return "heart.fill"
+        case "spiritual": return "moon.stars.fill"
+        case "peace": return "leaf.fill"
+        case "struggle": return "hand.raised.fill"
+        case "gratitude": return "sparkles"
+        case "hope": return "sunrise.fill"
+        default: return "book.fill"
+        }
+    }
+}
+
+// MARK: - Foods of the Quran Models
+
+struct FoodsData: Codable {
+    let foods: [Food]
+}
+
+struct Food: Codable, Identifiable {
+    let id: String
+    let nameEn: String
+    let nameAr: String
+    let nameUr: String
+    let emoji: String
+    let illustrationAsset: String
+    let surahNumber: Int
+    let verseNumber: Int
+    let narrationEn: String
+    let narrationAr: String
+    let narrationUr: String
+    let narrationSource: String
+    let sunnahTipEn: String
+    let sunnahTipAr: String
+    let sunnahTipUr: String
+    let nutritionNoteEn: String
+    let nutritionNoteAr: String
+    let nutritionNoteUr: String
+
+    var verseReference: String { "Quran \(surahNumber):\(verseNumber)" }
+
+    func name(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return nameAr
+        case .urdu:   return nameUr
+        default:      return nameEn
+        }
+    }
+
+    func narration(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return narrationAr
+        case .urdu:   return narrationUr
+        default:      return narrationEn
+        }
+    }
+
+    func sunnahTip(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return sunnahTipAr
+        case .urdu:   return sunnahTipUr
+        default:      return sunnahTipEn
+        }
+    }
+
+    func nutritionNote(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return nutritionNoteAr
+        case .urdu:   return nutritionNoteUr
+        default:      return nutritionNoteEn
+        }
+    }
+}
+
+// MARK: - Prophetic Stories Models
+
+struct PropheticStoriesData: Codable {
+    let stories: [PropheticStory]
+}
+
+struct PropheticStory: Codable, Identifiable {
+    let id: String
+    let titleEn: String
+    let titleAr: String
+    let titleUr: String
+    let shortTitleEn: String?
+    let shortTitleAr: String?
+    let shortTitleUr: String?
+    let prophetEn: String
+    let prophetAr: String
+    let prophetUr: String
+    let category: StoryCategory
+    let verses: [StoryVerse]
+    let relatedStories: [String]
+    let lessonsSummaryEn: String?
+    let lessonsSummaryAr: String?
+    let lessonsSummaryUr: String?
+
+    var categoryIcon: String {
+        category.icon
+    }
+
+    var verseCount: Int {
+        verses.count
+    }
+
+    var keyVerses: [StoryVerse] {
+        verses.filter { $0.isKeyVerse }
+    }
+
+    func title(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return titleAr
+        case .urdu:   return titleUr
+        default:      return titleEn
+        }
+    }
+
+    func shortTitle(for language: CommentaryLanguage) -> String? {
+        switch language {
+        case .arabic: return shortTitleAr
+        case .urdu:   return shortTitleUr
+        default:      return shortTitleEn
+        }
+    }
+
+    func prophet(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return prophetAr
+        case .urdu:   return prophetUr
+        default:      return prophetEn
+        }
+    }
+
+    func lessonsSummary(for language: CommentaryLanguage) -> String? {
+        switch language {
+        case .arabic: return lessonsSummaryAr
+        case .urdu:   return lessonsSummaryUr
+        default:      return lessonsSummaryEn
+        }
+    }
+}
+
+struct StoryVerse: Codable {
+    let surahNumber: Int
+    let verseNumber: Int
+    let storyNoteEn: String
+    let storyNoteAr: String
+    let storyNoteUr: String
+    let isKeyVerse: Bool
+
+    var verseReference: String {
+        "Quran \(surahNumber):\(verseNumber)"
+    }
+
+    func storyNote(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return storyNoteAr
+        case .urdu:   return storyNoteUr
+        default:      return storyNoteEn
+        }
+    }
+}
+
+enum StoryCategory: String, Codable, CaseIterable {
+    case patience = "patience"
+    case courage = "courage"
+    case faith = "faith"
+    case sacrifice = "sacrifice"
+    case leadership = "leadership"
+    case wisdom = "wisdom"
+
+    var displayName: String {
+        switch self {
+        case .patience: return "Patience & Perseverance"
+        case .courage: return "Courage & Bravery"
+        case .faith: return "Faith & Trust"
+        case .sacrifice: return "Sacrifice & Devotion"
+        case .leadership: return "Leadership"
+        case .wisdom: return "Wisdom & Knowledge"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .patience: return "clock.fill"
+        case .courage: return "shield.fill"
+        case .faith: return "star.fill"
+        case .sacrifice: return "heart.fill"
+        case .leadership: return "crown.fill"
+        case .wisdom: return "brain.head.profile"
+        }
+    }
+}
+
+// MARK: - Ahl al-Bayt in the Quran Models
+
+struct AhlulbaytQuranData: Codable {
+    let entries: [AhlulbaytEntry]
+}
+
+struct AhlulbaytEntry: Codable, Identifiable {
+    let id: String
+    let titleEn: String
+    let titleAr: String
+    let titleUr: String
+    let shortTitleEn: String?
+    let shortTitleAr: String?
+    let shortTitleUr: String?
+    let category: AhlulbaytCategory
+    let verses: [AhlulbaytVerse]
+    let ahlulbaytMembersEn: [String]
+    let ahlulbaytMembersAr: [String]
+    let ahlulbaytMembersUr: [String]
+    let revelationContextEn: String
+    let revelationContextAr: String
+    let revelationContextUr: String
+    let relatedEntries: [String]
+
+    var categoryIcon: String {
+        category.icon
+    }
+
+    var verseCount: Int {
+        verses.count
+    }
+
+    var primaryVerses: [AhlulbaytVerse] {
+        verses.filter { $0.isPrimary }
+    }
+
+    func title(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return titleAr
+        case .urdu:   return titleUr
+        default:      return titleEn
+        }
+    }
+
+    func shortTitle(for language: CommentaryLanguage) -> String? {
+        switch language {
+        case .arabic: return shortTitleAr
+        case .urdu:   return shortTitleUr
+        default:      return shortTitleEn
+        }
+    }
+
+    func ahlulbaytMembers(for language: CommentaryLanguage) -> [String] {
+        switch language {
+        case .arabic: return ahlulbaytMembersAr
+        case .urdu:   return ahlulbaytMembersUr
+        default:      return ahlulbaytMembersEn
+        }
+    }
+
+    func revelationContext(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return revelationContextAr
+        case .urdu:   return revelationContextUr
+        default:      return revelationContextEn
+        }
+    }
+}
+
+struct AhlulbaytVerse: Codable {
+    let surahNumber: Int
+    let verseNumber: Int
+    let contextEn: String
+    let contextAr: String
+    let contextUr: String
+    let isPrimary: Bool
+
+    var verseReference: String {
+        "Quran \(surahNumber):\(verseNumber)"
+    }
+
+    func context(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return contextAr
+        case .urdu:   return contextUr
+        default:      return contextEn
+        }
+    }
+}
+
+enum AhlulbaytCategory: String, Codable, CaseIterable {
+    case purity = "purity"
+    case love = "love"
+    case authority = "authority"
+    case sacrifice = "sacrifice"
+    case knowledge = "knowledge"
+    case rights = "rights"
+
+    var displayName: String {
+        switch self {
+        case .purity: return "Purity & Sanctity"
+        case .love: return "Love & Reverence"
+        case .authority: return "Authority & Leadership"
+        case .sacrifice: return "Sacrifice & Devotion"
+        case .knowledge: return "Knowledge & Wisdom"
+        case .rights: return "Rights & Status"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .purity: return "sparkles"
+        case .love: return "heart.fill"
+        case .authority: return "crown.fill"
+        case .sacrifice: return "gift.fill"
+        case .knowledge: return "book.fill"
+        case .rights: return "scale.3d"
+        }
+    }
+}
+
+// MARK: - Fasting in the Quran Models
+
+struct FastingVersesData: Codable {
+    let categories: [FastingCategory]
+}
+
+struct FastingCategory: Codable, Identifiable {
+    let id: String
+    let titleEn: String
+    let titleAr: String
+    let titleUr: String
+    let icon: String
+    let descriptionEn: String
+    let descriptionAr: String
+    let descriptionUr: String
+    let verses: [FastingVerse]
+    /// One narration from the Ahlul Bayt (ʿa) tied to this category's theme. Optional so
+    /// categories without a narration still decode.
+    let narration: AhlulBaytNarration?
+
+    var verseCount: Int {
+        verses.count
+    }
+
+    func title(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return titleAr
+        case .urdu:   return titleUr
+        default:      return titleEn
+        }
+    }
+
+    func description(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return descriptionAr
+        case .urdu:   return descriptionUr
+        default:      return descriptionEn
+        }
+    }
+}
+
+struct FastingVerse: Codable, Identifiable {
+    let id: String
+    let surahNumber: Int
+    let verseNumber: Int
+    let relevanceNoteEn: String
+    let relevanceNoteAr: String
+    let relevanceNoteUr: String
+    let isKeyVerse: Bool
+
+    var verseReference: String {
+        "Quran \(surahNumber):\(verseNumber)"
+    }
+
+    func relevanceNote(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return relevanceNoteAr
+        case .urdu:   return relevanceNoteUr
+        default:      return relevanceNoteEn
+        }
+    }
+}
+
+/// A single attributed narration from the Ahlul Bayt (ʿa) — shared by the Fasting and
+/// Prophetic Parallels features. The Arabic narration is always shown; the
+/// translation is read by language (Arabic readers read the narration itself), and the
+/// source citation is localized like every other field in this feature.
+struct AhlulBaytNarration: Codable {
+    let arabic: String
+    let translationEn: String
+    let translationUr: String
+    let sourceEn: String
+    let sourceAr: String
+    let sourceUr: String
+
+    func translation(for language: CommentaryLanguage) -> String {
+        language == .urdu ? translationUr : translationEn
+    }
+
+    func source(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return sourceAr
+        case .urdu:   return sourceUr
+        default:      return sourceEn
+        }
+    }
+}
+
+// MARK: - Ramadan Journey Models
+
+struct RamadanJourneyData: Codable {
+    let days: [RamadanDay]
+}
+
+struct RamadanDay: Codable, Identifiable {
+    let id: String
+    let dayNumber: Int
+    let theme: String
+    let themeArabic: String
+    let icon: String
+    let dua: RamadanDua
+    let verses: [RamadanVerse]
+    let tafsirFocus: String
+    let reflection: String
+    let themeUr: String
+    let tafsirFocusUr: String
+    let reflectionUr: String
+
+    func localizedTheme(_ l: CommentaryLanguage) -> String { l == .urdu ? themeUr : theme }
+    func localizedTafsir(_ l: CommentaryLanguage) -> String { l == .urdu ? tafsirFocusUr : tafsirFocus }
+    func localizedReflection(_ l: CommentaryLanguage) -> String { l == .urdu ? reflectionUr : reflection }
+}
+
+struct RamadanDua: Codable {
+    let arabic: String
+    let transliteration: String
+    let english: String
+    let source: String?
+    let englishUr: String
+    let sourceUr: String?
+
+    func localizedEnglish(_ l: CommentaryLanguage) -> String { l == .urdu ? englishUr : english }
+    func localizedSource(_ l: CommentaryLanguage) -> String? { l == .urdu ? (sourceUr ?? source) : source }
+}
+
+struct RamadanVerse: Codable, Identifiable {
+    let id: String
+    let surahNumber: Int
+    let verseNumber: Int
+    let relevanceNote: String
+    let relevanceNoteUr: String
+
+    func localizedNote(_ l: CommentaryLanguage) -> String { l == .urdu ? relevanceNoteUr : relevanceNote }
+
+    var verseReference: String {
+        "Quran \(surahNumber):\(verseNumber)"
+    }
+}
+
+struct RamadanJourneyProgress: Codable {
+    var completedDays: Set<Int>
+    var lastCompletedDate: Date?
+    var year: Int
+
+    init(
+        completedDays: Set<Int> = [],
+        lastCompletedDate: Date? = nil,
+        year: Int = 0
+    ) {
+        self.completedDays = completedDays
+        self.lastCompletedDate = lastCompletedDate
+        self.year = year
+    }
+
+    var completionPercentage: Double {
+        Double(completedDays.count) / 30.0
+    }
+
+    var isCompleted: Bool {
+        completedDays.count >= 30
+    }
+}
+
+// MARK: - Hajj Journey Models
+
+struct HajjJourneyData: Codable {
+    let days: [HajjDay]
+}
+
+struct HajjDay: Codable, Identifiable {
+    let id: String
+    let dayNumber: Int
+    let theme: String
+    let themeArabic: String
+    let icon: String
+    let dua: HajjDua
+    let verses: [HajjVerse]
+    let tafsirFocus: String
+    let reflection: String
+    let themeUr: String
+    let tafsirFocusUr: String
+    let reflectionUr: String
+
+    func localizedTheme(_ l: CommentaryLanguage) -> String { l == .urdu ? themeUr : theme }
+    func localizedTafsir(_ l: CommentaryLanguage) -> String { l == .urdu ? tafsirFocusUr : tafsirFocus }
+    func localizedReflection(_ l: CommentaryLanguage) -> String { l == .urdu ? reflectionUr : reflection }
+}
+
+struct HajjDua: Codable {
+    let arabic: String
+    let transliteration: String
+    let english: String
+    let source: String?
+    let englishUr: String
+    let sourceUr: String?
+
+    func localizedEnglish(_ l: CommentaryLanguage) -> String { l == .urdu ? englishUr : english }
+    func localizedSource(_ l: CommentaryLanguage) -> String? { l == .urdu ? (sourceUr ?? source) : source }
+}
+
+struct HajjVerse: Codable, Identifiable {
+    let id: String
+    let surahNumber: Int
+    let verseNumber: Int
+    let relevanceNote: String
+    let relevanceNoteUr: String
+
+    func localizedNote(_ l: CommentaryLanguage) -> String { l == .urdu ? relevanceNoteUr : relevanceNote }
+
+    var verseReference: String {
+        "Quran \(surahNumber):\(verseNumber)"
+    }
+}
+
+struct HajjJourneyProgress: Codable {
+    var completedDays: Set<Int>
+    var lastCompletedDate: Date?
+    var year: Int
+
+    init(
+        completedDays: Set<Int> = [],
+        lastCompletedDate: Date? = nil,
+        year: Int = 0
+    ) {
+        self.completedDays = completedDays
+        self.lastCompletedDate = lastCompletedDate
+        self.year = year
+    }
+
+    var completionPercentage: Double {
+        Double(completedDays.count) / 10.0
+    }
+
+    var isCompleted: Bool {
+        completedDays.count >= 10
+    }
+}
+
+// MARK: - Muharram Journey Models
+
+struct MuharramJourneyData: Codable {
+    let days: [MuharramDay]
+}
+
+struct MuharramDay: Codable, Identifiable {
+    let id: String
+    let dayNumber: Int
+    let theme: String
+    let themeArabic: String
+    let icon: String
+    let dua: MuharramDua
+    let verses: [MuharramVerse]
+    let tafsirFocus: String
+    let reflection: String
+    let themeUr: String
+    let tafsirFocusUr: String
+    let reflectionUr: String
+
+    func localizedTheme(_ l: CommentaryLanguage) -> String { l == .urdu ? themeUr : theme }
+    func localizedTafsir(_ l: CommentaryLanguage) -> String { l == .urdu ? tafsirFocusUr : tafsirFocus }
+    func localizedReflection(_ l: CommentaryLanguage) -> String { l == .urdu ? reflectionUr : reflection }
+}
+
+struct MuharramDua: Codable {
+    let arabic: String
+    let transliteration: String
+    let english: String
+    let source: String?
+    let englishUr: String
+    let sourceUr: String?
+
+    func localizedEnglish(_ l: CommentaryLanguage) -> String { l == .urdu ? englishUr : english }
+    func localizedSource(_ l: CommentaryLanguage) -> String? { l == .urdu ? (sourceUr ?? source) : source }
+}
+
+struct MuharramVerse: Codable, Identifiable {
+    let id: String
+    let surahNumber: Int
+    let verseNumber: Int
+    let relevanceNote: String
+    let relevanceNoteUr: String
+
+    func localizedNote(_ l: CommentaryLanguage) -> String { l == .urdu ? relevanceNoteUr : relevanceNote }
+
+    var verseReference: String {
+        "Quran \(surahNumber):\(verseNumber)"
+    }
+}
+
+struct MuharramJourneyProgress: Codable {
+    var observedDays: Set<Int>
+    var lastObservedDate: Date?
+    var year: Int
+
+    init(
+        observedDays: Set<Int> = [],
+        lastObservedDate: Date? = nil,
+        year: Int = 0
+    ) {
+        self.observedDays = observedDays
+        self.lastObservedDate = lastObservedDate
+        self.year = year
+    }
+
+    var completionPercentage: Double {
+        Double(observedDays.count) / 10.0
+    }
+}
+
+// MARK: - Daily Duas Models
+
+struct DailyDuasData: Codable {
+    let duas: [DailyDua]
+}
+
+struct DailyDua: Codable, Identifiable {
+    let id: String
+    let situationEn: String
+    let situationAr: String
+    let situationUr: String
+    let arabic: String
+    let transliteration: String
+    let translationEn: String
+    let translationUr: String
+    let source: String
+    let category: String
+    /// Set for duas drawn from the Qur'an, so the source can link to the verse. nil otherwise.
+    let surahNumber: Int?
+    let verseNumber: Int?
+
+    func situation(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .arabic: return situationAr
+        case .urdu: return situationUr
+        default: return situationEn
+        }
+    }
+
+    /// The Qur'an verse this dua is drawn from, if any.
+    var quranVerse: (surah: Int, verse: Int)? {
+        if let s = surahNumber, let v = verseNumber { return (s, v) }
+        return nil
+    }
+
+    func translation(for language: CommentaryLanguage) -> String {
+        switch language {
+        case .urdu: return translationUr
+        default: return translationEn
+        }
+    }
+
+    var categoryIcon: String {
+        switch category.lowercased() {
+        case "health": return "heart.fill"
+        case "provision": return "leaf.fill"
+        case "guidance": return "signpost.right.fill"
+        case "faith": return "flame.fill"
+        case "forgiveness": return "drop.fill"
+        case "family": return "house.fill"
+        case "protection": return "shield.fill"
+        case "devotion": return "moon.stars.fill"
+        default: return "hands.sparkles.fill"
+        }
+    }
+}
+
+// MARK: - Fatimiyya Journey Models
+
+struct FatimiyyaJourneyData: Codable {
+    let days: [FatimiyyaDay]
+}
+
+struct FatimiyyaDay: Codable, Identifiable {
+    let id: String
+    let dayNumber: Int
+    let theme: String
+    let themeArabic: String
+    let icon: String
+    let dua: FatimiyyaDua
+    let verses: [FatimiyyaVerse]
+    let tafsirFocus: String
+    let reflection: String
+    let themeUr: String
+    let tafsirFocusUr: String
+    let reflectionUr: String
+
+    func localizedTheme(_ l: CommentaryLanguage) -> String { l == .urdu ? themeUr : theme }
+    func localizedTafsir(_ l: CommentaryLanguage) -> String { l == .urdu ? tafsirFocusUr : tafsirFocus }
+    func localizedReflection(_ l: CommentaryLanguage) -> String { l == .urdu ? reflectionUr : reflection }
+}
+
+struct FatimiyyaDua: Codable {
+    let arabic: String
+    let transliteration: String
+    let english: String
+    let source: String?
+    let englishUr: String
+    let sourceUr: String?
+
+    func localizedEnglish(_ l: CommentaryLanguage) -> String { l == .urdu ? englishUr : english }
+    func localizedSource(_ l: CommentaryLanguage) -> String? { l == .urdu ? (sourceUr ?? source) : source }
+}
+
+struct FatimiyyaVerse: Codable, Identifiable {
+    let id: String
+    let surahNumber: Int
+    let verseNumber: Int
+    let relevanceNote: String
+    let relevanceNoteUr: String
+
+    func localizedNote(_ l: CommentaryLanguage) -> String { l == .urdu ? relevanceNoteUr : relevanceNote }
+
+    var verseReference: String { "Quran \(surahNumber):\(verseNumber)" }
+}
+
+struct FatimiyyaJourneyProgress: Codable {
+    var observedDays: Set<Int>
+    var lastObservedDate: Date?
+    var year: Int
+
+    init(observedDays: Set<Int> = [], lastObservedDate: Date? = nil, year: Int = 0) {
+        self.observedDays = observedDays
+        self.lastObservedDate = lastObservedDate
+        self.year = year
+    }
+
+    /// 5-day journey.
+    var completionPercentage: Double { Double(observedDays.count) / 5.0 }
+}
+
+// MARK: - Arbaeen Journey Models
+
+struct ArbaeenJourneyData: Codable {
+    let days: [ArbaeenDay]
+}
+
+struct ArbaeenDay: Codable, Identifiable {
+    let id: String
+    let dayNumber: Int
+    let theme: String
+    let themeArabic: String
+    let icon: String
+    let dua: ArbaeenDua
+    let verses: [ArbaeenVerse]
+    let tafsirFocus: String
+    let reflection: String
+    let themeUr: String
+    let tafsirFocusUr: String
+    let reflectionUr: String
+
+    func localizedTheme(_ l: CommentaryLanguage) -> String { l == .urdu ? themeUr : theme }
+    func localizedTafsir(_ l: CommentaryLanguage) -> String { l == .urdu ? tafsirFocusUr : tafsirFocus }
+    func localizedReflection(_ l: CommentaryLanguage) -> String { l == .urdu ? reflectionUr : reflection }
+}
+
+struct ArbaeenDua: Codable {
+    let arabic: String
+    let transliteration: String
+    let english: String
+    let source: String?
+    let englishUr: String
+    let sourceUr: String?
+    /// Optional full text for a "Read the full ziyarat" disclosure (Station 8 finale only).
+    let fullArabic: String?
+    let fullEnglish: String?
+
+    func localizedEnglish(_ l: CommentaryLanguage) -> String { l == .urdu ? englishUr : english }
+    func localizedSource(_ l: CommentaryLanguage) -> String? { l == .urdu ? (sourceUr ?? source) : source }
+}
+
+struct ArbaeenVerse: Codable, Identifiable {
+    let id: String
+    let surahNumber: Int
+    let verseNumber: Int
+    let relevanceNote: String
+    let relevanceNoteUr: String
+
+    func localizedNote(_ l: CommentaryLanguage) -> String { l == .urdu ? relevanceNoteUr : relevanceNote }
+
+    var verseReference: String { "Quran \(surahNumber):\(verseNumber)" }
+}
+
+struct ArbaeenJourneyProgress: Codable {
+    var observedDays: Set<Int>
+    var lastObservedDate: Date?
+    var year: Int
+
+    init(observedDays: Set<Int> = [], lastObservedDate: Date? = nil, year: Int = 0) {
+        self.observedDays = observedDays
+        self.lastObservedDate = lastObservedDate
+        self.year = year
+    }
+
+    /// 8-station journey.
+    var completionPercentage: Double { Double(observedDays.count) / 8.0 }
+}
