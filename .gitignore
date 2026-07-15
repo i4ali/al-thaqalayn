@@ -133,8 +133,9 @@ video_output/
 # Superpowers brainstorm companion (local mockups)
 .superpowers/
 
-# Claude Code transient runtime
-.claude/scheduled_tasks.lock
+# Claude Code tooling + internal notes (kept local, never published)
+.claude/
+/docs/handoffs/
 
 # ── Cleanup 2026-06-15: content/scratch, not app code ──
 
