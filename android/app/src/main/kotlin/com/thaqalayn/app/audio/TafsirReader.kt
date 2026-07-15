@@ -27,7 +27,9 @@ object TafsirReader {
     var highlightRange by mutableStateOf<IntRange?>(null)
         private set
 
-    private var currentText: String? = null
+    /** Text currently loaded in the reader; DuaListenButton keys its state off this. */
+    var currentText by mutableStateOf<String?>(null)
+        private set
     private var currentLanguage: CommentaryLanguage = CommentaryLanguage.ENGLISH
     /** Resume offset when paused (Android TTS has no native pause). */
     private var pauseOffset = 0

@@ -39,7 +39,7 @@ import com.thaqalayn.app.data.VerseHit
 import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.ui.components.PhosphorIcon
 import com.thaqalayn.app.ui.components.pressable
-import com.thaqalayn.app.ui.home.SurahCard
+import com.thaqalayn.app.ui.home.SurahListRow
 import com.thaqalayn.app.ui.strings.QuranTabStrings
 import com.thaqalayn.app.ui.theme.Theme
 import kotlinx.coroutines.delay
@@ -64,7 +64,9 @@ fun SearchResults(
     query: String,
     lang: CommentaryLanguage,
     onOpenSurah: (Int) -> Unit,
-    onOpenVerse: (Int, Int) -> Unit
+    onOpenVerse: (Int, Int) -> Unit,
+    onOpenExperience: (String) -> Unit,
+    onShowPaywall: () -> Unit
 ) {
     val colors = Theme.colors
 
@@ -103,7 +105,13 @@ fun SearchResults(
             SectionLabel(QuranTabStrings.surahsLabel(lang), results.surahs.size)
             results.surahs.forEach { number ->
                 surahsByNumber[number]?.let { surah ->
-                    SurahCard(surah = surah, lang = lang) { onOpenSurah(number) }
+                    SurahListRow(
+                        surah = surah,
+                        lang = lang,
+                        onOpenSurah = { onOpenSurah(number) },
+                        onOpenExperience = onOpenExperience,
+                        onShowPaywall = onShowPaywall
+                    )
                 }
             }
         }

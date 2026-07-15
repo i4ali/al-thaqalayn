@@ -112,6 +112,16 @@ fun HomeScreen(navController: NavHostController) {
                     .size(36.dp)
                     .clip(CircleShape)
                     .border(1.dp, colors.strokeColor, CircleShape)
+                    .pressable { navController.navigate(Routes.NOTIFICATIONS) },
+                contentAlignment = Alignment.Center
+            ) {
+                PhosphorIcon(resId = R.drawable.ph_bell, size = 15.dp, tint = colors.accentColor, contentDescription = "Notifications")
+            }
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, colors.strokeColor, CircleShape)
                     .pressable { navController.navigate(Routes.SETTINGS) },
                 contentAlignment = Alignment.Center
             ) {
@@ -173,9 +183,13 @@ fun HomeScreen(navController: NavHostController) {
                     EmDivider(label = QuranTabStrings.surahsCount(surahs.size, lang))
                 }
                 items(filtered, key = { it.number }) { surah ->
-                    SurahCard(surah = surah, lang = lang) {
-                        navController.navigate(Routes.surah(surah.number))
-                    }
+                    SurahListRow(
+                        surah = surah,
+                        lang = lang,
+                        onOpenSurah = { navController.navigate(Routes.surah(surah.number)) },
+                        onOpenExperience = { navController.navigate(Routes.surahExperience(it)) },
+                        onShowPaywall = { navController.navigate(Routes.PAYWALL) }
+                    )
                 }
             } else {
                 item {
@@ -183,7 +197,9 @@ fun HomeScreen(navController: NavHostController) {
                         query = searchText,
                         lang = lang,
                         onOpenSurah = { navController.navigate(Routes.surah(it)) },
-                        onOpenVerse = { s, v -> navController.navigate(Routes.surah(s, v)) }
+                        onOpenVerse = { s, v -> navController.navigate(Routes.surah(s, v)) },
+                        onOpenExperience = { navController.navigate(Routes.surahExperience(it)) },
+                        onShowPaywall = { navController.navigate(Routes.PAYWALL) }
                     )
                 }
             }
@@ -313,30 +329,44 @@ private fun ContinueReadingCard(
     }
 }
 
-/** One surah row (iOS ModernSurahCard, emerald + legacy variants). */
+/**
+ * One surah row (iOS ModernSurahCard, emerald + legacy variants). When a
+ * journey-mode toggle is attached below (SurahListRow), the card squares its
+ * bottom and drops its own border - the row draws one combined outline.
+ */
 @Composable
 fun SurahCard(
     surah: Surah,
     lang: CommentaryLanguage,
+    squaredBottom: Boolean = false,
+    showsBorder: Boolean = true,
     onClick: () -> Unit
 ) {
     val colors = Theme.colors
     val isEmerald = colors.isMidnightEmerald
-    val shape = RoundedCornerShape(20.dp)
+    val shape = if (squaredBottom) {
+        RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    } else {
+        RoundedCornerShape(20.dp)
+    }
     val (read, total) = ProgressManager.getSurahCompletion(surah.number)
     val percentage = if (total > 0) (read * 100) / total else 0
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                if (isEmerald) 12.dp else 6.dp,
-                shape,
-                spotColor = Color.Black.copy(alpha = if (isEmerald) 0.28f else 0.04f)
-            )
+            .let { m ->
+                if (showsBorder) {
+                    m.shadow(
+                        if (isEmerald) 12.dp else 6.dp,
+                        shape,
+                        spotColor = Color.Black.copy(alpha = if (isEmerald) 0.28f else 0.04f)
+                    )
+                } else m
+            }
             .clip(shape)
             .background(if (isEmerald) colors.glassSurface else Color.White)
-            .border(1.dp, colors.strokeColor, shape)
+            .let { m -> if (showsBorder) m.border(1.dp, colors.strokeColor, shape) else m }
             .pressable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),

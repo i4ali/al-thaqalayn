@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -69,6 +70,7 @@ import com.thaqalayn.app.audio.AudioManager
 import com.thaqalayn.app.data.BookmarkManager
 import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.data.ProgressManager
+import com.thaqalayn.app.data.QuizManager
 import com.thaqalayn.app.model.AudioPlayerState
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.SurahWithTafsir
@@ -107,6 +109,10 @@ fun SurahDetailScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
+    val hasQuiz by produceState(initialValue = false, key1 = surahNumber) {
+        value = QuizManager.hasQuiz(surahNumber)
+    }
+
     // Deep-link scroll: verse cards start at list index 1 (header is item 0).
     LaunchedEffect(surahWithTafsir, targetVerse) {
         val target = targetVerse ?: return@LaunchedEffect
@@ -130,46 +136,82 @@ fun SurahDetailScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             ThemedBackground()
             val data = surahWithTafsir
-            if (data != null) {
-                LazyColumn(
-                    state = listState,
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+            ) {
+                // Pinned chrome: back + text size stay put while the surah scrolls
+                // (same fixed-header layout as FullScreenCommentaryScreen).
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = 20.dp, end = 20.dp, bottom = 120.dp
-                    )
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 12.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    item(key = "header") {
-                        SurahHeader(
-                            surah = data.surah,
-                            onBack = { navController.popBackStack() },
-                            onListen = { AudioManager.playVerseSequence(data.verses, data.surah) },
-                            onGoToVerse = { showGoToVerse = true },
-                            onToggleTextSize = { showTextSizePanel = !showTextSizePanel },
-                            textSizePanelOpen = showTextSizePanel
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .border(1.dp, colors.strokeColor, CircleShape)
+                            .pressable(onClick = { navController.popBackStack() }),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = colors.accentColor,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                    itemsIndexed(data.verses, key = { _, v -> v.number }) { _, verse ->
-                        VerseCard(
-                            verse = verse,
-                            surah = data.surah,
-                            onGems = {
-                                if (!PremiumManager.canAccessOverview(data.surah.number)) {
-                                    navController.navigate(Routes.PAYWALL)
-                                } else if (verse.tafsir != null) {
-                                    navController.navigate("summary/${data.surah.number}/${verse.number}")
-                                }
-                            },
-                            onInDepth = {
-                                if (!PremiumManager.canAccessTafsir(data.surah.number)) {
-                                    navController.navigate(Routes.PAYWALL)
-                                } else if (verse.tafsir != null) {
-                                    navController.navigate("commentary/${data.surah.number}/${verse.number}")
-                                }
-                            }
+                    TextSizeButton(isOpen = showTextSizePanel) { showTextSizePanel = !showTextSizePanel }
+                }
+                if (data != null) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            start = 20.dp, end = 20.dp, top = 8.dp, bottom = 120.dp
                         )
+                    ) {
+                        item(key = "header") {
+                            SurahHeader(
+                                surah = data.surah,
+                                hasQuiz = hasQuiz,
+                                onListen = { AudioManager.playVerseSequence(data.verses, data.surah) },
+                                onGoToVerse = { showGoToVerse = true },
+                                onQuiz = {
+                                    if (PremiumManager.canAccessQuiz(data.surah.number)) {
+                                        navController.navigate(Routes.quiz(data.surah.number))
+                                    } else {
+                                        navController.navigate(Routes.PAYWALL)
+                                    }
+                                }
+                            )
+                        }
+                        itemsIndexed(data.verses, key = { _, v -> v.number }) { _, verse ->
+                            VerseCard(
+                                verse = verse,
+                                surah = data.surah,
+                                onGems = {
+                                    if (!PremiumManager.canAccessOverview(data.surah.number)) {
+                                        navController.navigate(Routes.PAYWALL)
+                                    } else if (verse.tafsir != null) {
+                                        navController.navigate("summary/${data.surah.number}/${verse.number}")
+                                    }
+                                },
+                                onInDepth = {
+                                    if (!PremiumManager.canAccessTafsir(data.surah.number)) {
+                                        navController.navigate(Routes.PAYWALL)
+                                    } else if (verse.tafsir != null) {
+                                        navController.navigate("commentary/${data.surah.number}/${verse.number}")
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -203,97 +245,72 @@ fun SurahDetailScreen(
 @Composable
 private fun SurahHeader(
     surah: Surah,
-    onBack: () -> Unit,
+    hasQuiz: Boolean,
     onListen: () -> Unit,
     onGoToVerse: () -> Unit,
-    onToggleTextSize: () -> Unit,
-    textSizePanelOpen: Boolean
+    onQuiz: () -> Unit
 ) {
     val colors = Theme.colors
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(
+    EmCard(glow = true, modifier = Modifier.fillMaxWidth()) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .border(1.dp, colors.strokeColor, CircleShape)
-                    .pressable(onClick = onBack),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = colors.accentColor,
-                    modifier = Modifier.size(18.dp)
+            Text(
+                text = surah.arabicName,
+                fontFamily = AmiriFamily,
+                fontSize = 38.sp,
+                lineHeight = 56.sp,
+                color = colors.accentBright,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = surah.englishNameTranslation,
+                fontFamily = CormorantFamily,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.Medium,
+                fontSize = 19.sp,
+                color = colors.secondaryText
+            )
+            EmDivider()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "${surah.versesCount} Verses · ${surah.revelationType}",
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.tertiaryText
                 )
             }
-            TextSizeButton(isOpen = textSizePanelOpen, onClick = onToggleTextSize)
-        }
 
-        EmCard(glow = true, modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+            Row(
+                modifier = Modifier.padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = surah.arabicName,
-                    fontFamily = AmiriFamily,
-                    fontSize = 38.sp,
-                    lineHeight = 56.sp,
-                    color = colors.accentBright,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = surah.englishNameTranslation,
-                    fontFamily = CormorantFamily,
-                    fontStyle = FontStyle.Italic,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 19.sp,
-                    color = colors.secondaryText
-                )
-                EmDivider()
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "${surah.versesCount} Verses · ${surah.revelationType}",
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.tertiaryText
-                    )
-                }
-
+                // Listen (gold CTA)
                 Row(
-                    modifier = Modifier.padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .shadow(12.dp, RoundedCornerShape(15.dp), spotColor = colors.accentColor.copy(alpha = 0.28f))
+                        .clip(RoundedCornerShape(15.dp))
+                        .background(colors.accentGradient)
+                        .pressable(onClick = onListen)
+                        .padding(vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Listen (gold CTA)
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .shadow(12.dp, RoundedCornerShape(15.dp), spotColor = colors.accentColor.copy(alpha = 0.28f))
-                            .clip(RoundedCornerShape(15.dp))
-                            .background(colors.accentGradient)
-                            .pressable(onClick = onListen)
-                            .padding(vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = colors.onAccentText, modifier = Modifier.size(16.dp))
-                        Text("Listen", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colors.onAccentText)
-                    }
-
-                    HeaderChip(icon = Icons.Filled.Search, onClick = onGoToVerse)
-                    LanguageChip()
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = colors.onAccentText, modifier = Modifier.size(16.dp))
+                    Text("Listen", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colors.onAccentText)
                 }
+
+                HeaderChip(icon = Icons.Filled.Search, onClick = onGoToVerse)
+                if (hasQuiz) {
+                    HeaderChip(icon = Icons.Filled.Psychology, onClick = onQuiz)
+                }
+                LanguageChip()
             }
         }
     }

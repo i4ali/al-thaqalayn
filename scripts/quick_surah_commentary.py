@@ -2,15 +2,27 @@
 """Quick generation of any Surah with progress updates"""
 
 import json
+import os
 import sys
 import argparse
 sys.path.append('.')
+from dotenv import load_dotenv
 from generate_tafsir import TafsirGenerator
 
+load_dotenv()
+
+
+def _require_api_key():
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        print("❌ OPENROUTER_API_KEY not set (add it to .env or the environment)")
+        sys.exit(1)
+    return api_key
+
+
 def generate_surah_quick(surah_num):
-    # Set API key
-    api_key = "REDACTED_OPENROUTER_KEY"
-    
+    api_key = _require_api_key()
+
     # Initialize generator with OpenRouter
     generator = TafsirGenerator(api_key, use_openrouter=True, max_price=0.002)
     
@@ -81,9 +93,8 @@ def generate_surah_quick(surah_num):
 
 def generate_layer5_quick(surah_num):
     """Generate only Layer 5 (comparative commentary) for an existing surah tafsir"""
-    # Set API key
-    api_key = "REDACTED_OPENROUTER_KEY"
-    
+    api_key = _require_api_key()
+
     # Initialize generator with OpenRouter
     generator = TafsirGenerator(api_key, use_openrouter=True, max_price=0.002)
     

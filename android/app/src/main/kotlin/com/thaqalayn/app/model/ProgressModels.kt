@@ -96,6 +96,29 @@ enum class BadgeType(val key: String) {
             CROSSWORD_100 -> "سلسلة الكلمات ١٠٠ يوم"
         }
 
+    /** Long-form badge blurb (iOS BadgeType.description) - used in milestone notifications. */
+    val description: String
+        get() = when (this) {
+            SURAH_COMPLETION -> "Completed a surah of the Noble Quran"
+            MILESTONE_10 -> "The Beginner - Completed 10 surahs on your journey"
+            MILESTONE_25 -> "The Traveler - Completed 25 surahs on the spiritual path"
+            MILESTONE_50 -> "The Dedicated Student - Reached the halfway mark with 50 surahs"
+            ALL_SURAHS -> "Friend of Allah - Completed all 114 surahs of the Quran"
+            STREAK_7 -> "Consistent Believer - Maintained 7 days of steadfast reading"
+            STREAK_30 -> "Keeper of Daily Portion - 30 days of unwavering commitment"
+            STREAK_100 -> "The Devoted One - 100 days of dedicated spiritual practice"
+            RAMADAN_COMPLETION -> "Completed the entire 30-day Ramadan Journey"
+            HAJJ_COMPLETION -> "Completed the entire 10-day Dhul-Hijjah Journey"
+            DAILY_CHALLENGE_FIRST -> "Completed your first Daily Challenge"
+            DAILY_CHALLENGE_STREAK_7 -> "Completed Daily Challenges for 7 days in a row"
+            DAILY_CHALLENGE_STREAK_30 -> "Completed Daily Challenges for 30 days in a row"
+            DAILY_CHALLENGE_STREAK_100 -> "Completed Daily Challenges for 100 days in a row"
+            CROSSWORD_FIRST -> "Completed your first Daily Crossword"
+            CROSSWORD_7 -> "Completed Daily Crosswords for 7 days in a row"
+            CROSSWORD_30 -> "Completed Daily Crosswords for 30 days in a row"
+            CROSSWORD_100 -> "Completed Daily Crosswords for 100 days in a row"
+        }
+
     val sawabValue: Int
         get() = when (this) {
             SURAH_COMPLETION -> 100
@@ -136,4 +159,12 @@ data class LastReadInfo(
     val verseNumber: Int,
     val progress: Double,
     val updatedAt: Long
+)
+
+/** iOS ProgressPreferences - gates progress notifications and badge celebrations. */
+@Serializable
+data class ProgressPreferences(
+    val notificationsEnabled: Boolean = true,
+    val celebrationsEnabled: Boolean = true,
+    val showStreakInHeader: Boolean = true
 )

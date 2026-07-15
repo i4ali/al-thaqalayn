@@ -35,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -199,35 +198,6 @@ fun VerseSummaryScreen(
                         onToggle = {
                             expandedConceptId = if (expandedConceptId == concepts[i].id) null else concepts[i].id
                         }
-                    )
-                }
-            }
-
-            // Core insight (short classical commentary)
-            item { EmDivider(label = "The Core Insight") }
-            item {
-                val layer2Short = verse.tafsir?.getLayer2Short(lang)
-                if (layer2Short != null) {
-                    CompositionLocalProvider(
-                        LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                    ) {
-                        Text(
-                            text = layer2Short,
-                            fontFamily = if (lang.isRTL) AmiriFamily else CormorantFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = (18 * scale).sp,
-                            lineHeight = (18 * scale * 1.45f).sp,
-                            color = colors.primaryText,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                } else {
-                    Text(
-                        "Overview not available for this verse.",
-                        fontFamily = CormorantFamily,
-                        fontStyle = FontStyle.Italic,
-                        fontSize = 16.sp,
-                        color = colors.secondaryText
                     )
                 }
             }

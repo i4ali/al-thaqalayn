@@ -8,10 +8,12 @@ import androidx.compose.runtime.setValue
 import com.thaqalayn.app.model.BadgeAward
 import com.thaqalayn.app.model.BadgeType
 import com.thaqalayn.app.model.LastReadInfo
+import com.thaqalayn.app.model.ProgressPreferences
 import com.thaqalayn.app.model.ProgressStats
 import com.thaqalayn.app.model.ReadingStreak
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.VerseProgress
+import com.thaqalayn.app.notifications.NotificationManager
 import kotlinx.serialization.json.Json
 import java.util.Calendar
 import java.util.UUID
@@ -26,6 +28,7 @@ object ProgressManager {
     private const val STREAK_KEY = "readingStreak"
     private const val BADGES_KEY = "badgeAwards"
     private const val STATS_KEY = "progressStats"
+    private const val PREFERENCES_KEY = "progressPreferences"
 
     private lateinit var prefs: SharedPreferences
     private val json = Json { ignoreUnknownKeys = true }
@@ -40,9 +43,14 @@ object ProgressManager {
         private set
     var pendingBadge by mutableStateOf<BadgeAward?>(null)
         private set
+    var preferences by mutableStateOf(ProgressPreferences())
+        private set
 
     /** Surah metadata needed for completion checks, set once data loads. */
     private var surahsByNumber: Map<Int, Surah> = emptyMap()
+
+    /** Start-of-day the streak/nudge reminders were last armed for (in-memory, iOS parity). */
+    private var remindersScheduledForDay: Long? = null
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences("thaqalayn_progress", Context.MODE_PRIVATE)
@@ -59,6 +67,7 @@ object ProgressManager {
         streak = decode(STREAK_KEY) ?: ReadingStreak()
         badges = decode(BADGES_KEY) ?: emptyList()
         stats = decode(STATS_KEY) ?: ProgressStats(startDate = System.currentTimeMillis())
+        preferences = decode(PREFERENCES_KEY) ?: ProgressPreferences()
     }
 
     private inline fun <reified T> decode(key: String): T? =
@@ -76,7 +85,19 @@ object ProgressManager {
             .putString(STREAK_KEY, json.encodeToString(streak))
             .putString(BADGES_KEY, json.encodeToString(badges))
             .putString(STATS_KEY, json.encodeToString(stats))
+            .putString(PREFERENCES_KEY, json.encodeToString(preferences))
             .apply()
+    }
+
+    // MARK: - Preferences
+
+    fun updatePreferences(newPreferences: ProgressPreferences) {
+        val wasEnabled = preferences.notificationsEnabled
+        preferences = newPreferences
+        saveProgress()
+        if (wasEnabled && !newPreferences.notificationsEnabled) {
+            NotificationManager.cancelProgressNotifications()
+        }
     }
 
     // MARK: - Reading
@@ -114,6 +135,8 @@ object ProgressManager {
         updateStreak(now)
         checkSurahCompletion(surahNumber)
         saveProgress()
+        // Re-arm engagement notifications now that progress changed.
+        updateEngagementNotifications(surahNumber)
         return true
     }
 
@@ -174,7 +197,8 @@ object ProgressManager {
             totalSurahsCompleted = stats.totalSurahsCompleted + 1,
             totalSawab = stats.totalSawab + badge.badgeType.sawabValue
         )
-        pendingBadge = badge
+        if (preferences.celebrationsEnabled) pendingBadge = badge
+        notifyBadgeAwarded(badge)
         checkMilestoneBadges()
     }
 
@@ -197,7 +221,8 @@ object ProgressManager {
                 )
                 badges = badges + badge
                 stats = stats.copy(totalSawab = stats.totalSawab + type.sawabValue)
-                pendingBadge = badge
+                if (preferences.celebrationsEnabled) pendingBadge = badge
+                notifyBadgeAwarded(badge)
             }
         }
     }
@@ -270,9 +295,104 @@ object ProgressManager {
                 )
                 badges = badges + badge
                 stats = stats.copy(totalSawab = stats.totalSawab + type.sawabValue)
-                pendingBadge = badge
+                if (preferences.celebrationsEnabled) pendingBadge = badge
+                notifyBadgeAwarded(badge)
             }
         }
+    }
+
+    // MARK: - Engagement notifications (iOS updateEngagementNotifications/notifyBadgeAwarded)
+
+    /**
+     * Re-arm the schedule-ahead reminders (streak + nudge, once per day) and
+     * fire near-completion encouragement when a long surah gets close.
+     */
+    private fun updateEngagementNotifications(surahNumber: Int) {
+        val (read, total) = getSurahCompletion(surahNumber)
+        val remaining = total - read
+        val surahName = surahsByNumber[surahNumber]?.englishName
+
+        val today = startOfDay(System.currentTimeMillis())
+        val shouldArmDailyReminders = remindersScheduledForDay != today
+        if (shouldArmDailyReminders) remindersScheduledForDay = today
+
+        if (remaining == 0) {
+            NotificationManager.cancelNearCompletion(surahNumber)
+        } else if (remaining == 5 && total >= 20 && surahName != null) {
+            NotificationManager.scheduleNearCompletionEncouragement(
+                surahNumber = surahNumber,
+                surahName = surahName,
+                versesRemaining = remaining
+            )
+        }
+
+        if (shouldArmDailyReminders) {
+            NotificationManager.scheduleStreakReminder()
+            NotificationManager.scheduleGentleNudge()
+        }
+    }
+
+    /** Send a milestone celebration notification for a freshly awarded badge. */
+    private fun notifyBadgeAwarded(badge: BadgeAward) {
+        val message = when (badge.badgeType) {
+            BadgeType.SURAH_COMPLETION ->
+                "You've completed Surah ${badge.surahName}! Badge earned: ${badge.badgeType.title}."
+            BadgeType.DAILY_CHALLENGE_FIRST,
+            BadgeType.DAILY_CHALLENGE_STREAK_7,
+            BadgeType.DAILY_CHALLENGE_STREAK_30,
+            BadgeType.DAILY_CHALLENGE_STREAK_100 ->
+                "Daily Challenge badge earned: ${badge.badgeType.title} - ${badge.badgeType.description}"
+            else ->
+                "Badge earned: ${badge.badgeType.title} - ${badge.badgeType.description}"
+        }
+        NotificationManager.scheduleMilestoneCelebration(message)
+    }
+
+    // MARK: - Reset
+
+    /** Clear all reading progress, badges and stats (Settings -> Reset Progress). */
+    fun resetProgress() {
+        verseProgress = emptyList()
+        streak = ReadingStreak()
+        badges = emptyList()
+        stats = ProgressStats(startDate = System.currentTimeMillis())
+        preferences = ProgressPreferences()
+        pendingBadge = null
+
+        // Pending reminders reference the cleared streak/progress - drop them.
+        remindersScheduledForDay = null
+        NotificationManager.cancelProgressNotifications()
+
+        saveProgress()
+    }
+
+    // MARK: - Journey badges (iOS awardRamadanBadge/awardHajjBadge)
+
+    /** Award the Ramadan Champion badge; once per Islamic year. */
+    fun awardRamadanBadge(islamicYear: Int) =
+        awardJourneyBadge(BadgeType.RAMADAN_COMPLETION, "Ramadan Champion", "بطل رمضان", islamicYear)
+
+    /** Award the Hajj Champion badge; once per Islamic year. */
+    fun awardHajjBadge(islamicYear: Int) =
+        awardJourneyBadge(BadgeType.HAJJ_COMPLETION, "Hajj Champion", "بطل الحج", islamicYear)
+
+    private fun awardJourneyBadge(type: BadgeType, name: String, arabicName: String, islamicYear: Int) {
+        val alreadyAwarded = badges.any {
+            it.badgeType == type && IslamicCalendarManager.islamicYearOf(it.awardedDate) == islamicYear
+        }
+        if (alreadyAwarded) return
+        val badge = BadgeAward(
+            id = UUID.randomUUID().toString(),
+            surahNumber = 0,
+            surahName = name,
+            arabicName = arabicName,
+            awardedDate = System.currentTimeMillis(),
+            badgeType = type
+        )
+        badges = badges + badge
+        stats = stats.copy(totalSawab = stats.totalSawab + type.sawabValue)
+        pendingBadge = badge
+        saveProgress()
     }
 
     private fun versesReadToday(now: Long): Int {
