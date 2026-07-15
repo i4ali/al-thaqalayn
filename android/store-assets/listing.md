@@ -83,11 +83,21 @@ This app is an effort to keep them together, in your pocket.
 - screenshots/01..08 - phone screenshots (1080x2400): Today, surah list,
   reader, 5-layer commentary, Gems, Journeys hub, Deep Dive, crossword
 
+## Privacy policy
+
+**URL (paste into Play Console): https://i4ali.github.io/al-thaqalayn/**
+
+Android-specific policy (source: `android/store-assets/privacy/index.html`),
+hosted via GitHub Pages from the `gh-pages` branch of `i4ali/al-thaqalayn`.
+States: no data collected, no account, everything on-device, audio streamed
+from public recitation CDNs (everyayah.com / mp3quran.net), purchase via Play
+Billing only. Matches the Data Safety form ("no data collected/shared")
+exactly. Separate from the iOS policy (`privacy-policy.html`), which describes
+the iOS-only optional account + cloud sync and must NOT be reused for Android.
+To update: edit the source file, rebuild the `gh-pages` branch's index.html,
+push.
+
 ## Open items
 
-- PRIVACY POLICY URL - required by Play before release. The iOS App Store
-  listing already has one; reuse that URL if it exists, otherwise host a
-  simple page (GitHub Pages works) stating: no data collected, all content
-  on-device, audio streamed from Quran recitation CDNs, contact email.
 - Feature graphic/screenshots can be re-generated; scripts live with Claude
   session notes (screenshots via emulator + adb screencap in demo mode).
