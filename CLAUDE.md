@@ -33,12 +33,6 @@ source .venv/bin/activate
 
 **Rationale**: Listening is a core way users engage with supplications; a duʿā shown without a Listen option is an inconsistency users notice and report.
 
-### ⚠️ CLOUD SYNC ARCHITECTURE PATTERN ⚠️
-
-**CRITICAL**: For any data type that needs to be synced to cloud (Supabase), follow the **[docs/BOOKMARK_SYNC_ARCHITECTURE.md](docs/BOOKMARK_SYNC_ARCHITECTURE.md)** as closely as possible
-
-**Do NOT** deviate from this pattern without explicit approval. This architecture guarantees data integrity and provides excellent UX.
-
 ### ⚠️ NEVER RUN MORE THAN TWO SUBAGENTS AT A TIME ⚠️
 
 **IMPORTANT**: Never launch more than two subagents (the Agent/Task tool) concurrently. When work needs many subagents — fan-out content authoring, parallel search, multi-file edits — batch them into **waves of at most two** and wait for each wave to finish before starting the next. Do NOT launch 3+ Agent calls in a single message.
