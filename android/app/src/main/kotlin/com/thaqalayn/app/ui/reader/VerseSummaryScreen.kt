@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,12 +30,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
@@ -60,6 +65,8 @@ import com.thaqalayn.app.ui.search.colorFromHex
 import com.thaqalayn.app.ui.theme.AmiriFamily
 import com.thaqalayn.app.ui.theme.CormorantFamily
 import com.thaqalayn.app.ui.theme.Theme
+import java.text.Normalizer
+import kotlinx.coroutines.launch
 
 /**
  * "Gems" screen: quick overview of a verse - interactive concept gems plus the
@@ -83,14 +90,18 @@ fun VerseSummaryScreen(
     }
 
     var expandedConceptId by remember { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
         val data = loaded ?: return@Box
         val (surah, verse) = data
         val concepts = verse.tafsir?.quickOverview?.concepts.orEmpty()
+        val expandedConcept = concepts.firstOrNull { it.id == expandedConceptId }
 
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding(),
@@ -163,9 +174,12 @@ fun VerseSummaryScreen(
                 }
             }
 
-            // Arabic verse
+            // Arabic verse, with the expanded gem's fragment highlighted (iOS HighlightedArabicText)
             item {
                 val shape = RoundedCornerShape(18.dp)
+                val arabicText = remember(verse.arabicText, expandedConcept) {
+                    highlightedVerseText(verse.arabicText, expandedConcept)
+                }
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     Box(
                         modifier = Modifier
@@ -176,7 +190,7 @@ fun VerseSummaryScreen(
                             .padding(18.dp)
                     ) {
                         Text(
-                            text = verse.arabicText,
+                            text = arabicText,
                             fontFamily = AmiriFamily,
                             fontSize = (24 * scale).sp,
                             lineHeight = (24 * scale * 1.9f).sp,
@@ -196,7 +210,16 @@ fun VerseSummaryScreen(
                         concept = concepts[i],
                         expanded = expandedConceptId == concepts[i].id,
                         onToggle = {
-                            expandedConceptId = if (expandedConceptId == concepts[i].id) null else concepts[i].id
+                            val expanding = expandedConceptId != concepts[i].id
+                            expandedConceptId = if (expanding) concepts[i].id else null
+                            if (expanding) {
+                                // Keep the highlighted verse visible (index 2 = Arabic verse item)
+                                val verseVisible = listState.layoutInfo.visibleItemsInfo
+                                    .any { it.index == 2 && it.offset >= listState.layoutInfo.viewportStartOffset }
+                                if (!verseVisible) {
+                                    coroutineScope.launch { listState.animateScrollToItem(2) }
+                                }
+                            }
                         }
                     )
                 }
@@ -209,6 +232,30 @@ fun VerseSummaryScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * Builds the verse text with the selected gem's [VerseConcept.arabicHighlight] fragment
+ * bolded in the gem's color (iOS HighlightedArabicText). Both sides are NFC-normalized:
+ * the tafsir highlights order diacritics (shadda/fatha) differently from quran_data's
+ * verse text, which Swift's canonical string matching absorbs but Kotlin's indexOf does not.
+ */
+private fun highlightedVerseText(verseArabic: String, concept: VerseConcept?): AnnotatedString {
+    val text = Normalizer.normalize(verseArabic, Normalizer.Form.NFC)
+    val highlight = concept?.arabicHighlight
+        ?.takeIf { it.isNotBlank() }
+        ?.let { Normalizer.normalize(it, Normalizer.Form.NFC) }
+        ?: return AnnotatedString(text)
+    val start = text.indexOf(highlight)
+    if (start < 0) return AnnotatedString(text)
+    return buildAnnotatedString {
+        append(text)
+        addStyle(
+            SpanStyle(color = colorFromHex(concept.colorHex), fontWeight = FontWeight.Bold),
+            start,
+            start + highlight.length
+        )
     }
 }
 
@@ -280,7 +327,7 @@ private fun ConceptGemCard(
                             text = concept.getWhyItMatters(lang),
                             fontSize = (14 * scale).sp,
                             lineHeight = (14 * scale * 1.5f).sp,
-                            color = colors.secondaryText
+                            color = colors.primaryText
                         )
                     }
                 }
