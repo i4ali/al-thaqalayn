@@ -6,6 +6,7 @@ package com.thaqalayn.app.data
 // calendar logic - an entry is simply available or coming soon. SF symbols are
 // mapped to Material icons here, following the per-file mapping convention.
 
+import androidx.annotation.DrawableRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.thaqalayn.app.R
 import com.thaqalayn.app.content.sabrDive
 import com.thaqalayn.app.content.surahAliImranDive
 import com.thaqalayn.app.content.surahBaqaraDive
@@ -43,7 +45,12 @@ data class DeepDiveDescriptor(
     /** True when the dive is built and openable. False = "coming soon" placeholder. */
     val available: Boolean,
     /** The dive content, present only when [available]. */
-    val dive: DeepDive?
+    val dive: DeepDive?,
+    /**
+     * Premium cover art. ONE field feeds every surface: shelf poster, list
+     * tile, descent threshold, descent veil, and the paywall hero context.
+     */
+    @DrawableRes val coverRes: Int
 ) {
     companion object {
         val all: List<DeepDiveDescriptor> = listOf(
@@ -57,7 +64,8 @@ data class DeepDiveDescriptor(
                     "تین گہرائیوں میں اترتا ایک سفر - قرآن سے کربلا تک",
                     "نزولٌ عبر ثلاثة أعماق - من القرآن إلى كربلاء"
                 ),
-                available = true, dive = yaqinDive
+                available = true, dive = yaqinDive,
+                coverRes = R.drawable.dive_cover_yaqin
             ),
             DeepDiveDescriptor(
                 id = "sabr",
@@ -69,7 +77,8 @@ data class DeepDiveDescriptor(
                     "تین منزلوں میں اترتا ایک سفر - قرآن سے کربلا تک",
                     "نزولٌ عبر ثلاث محطات - من القرآن إلى كربلاء"
                 ),
-                available = true, dive = sabrDive
+                available = true, dive = sabrDive,
+                coverRes = R.drawable.dive_cover_sabr
             ),
             DeepDiveDescriptor(
                 id = "tawakkul",
@@ -81,7 +90,8 @@ data class DeepDiveDescriptor(
                     "انجام کو اللہ کے سپرد کر دینا",
                     "أن تُسلّم النتيجة لله"
                 ),
-                available = false, dive = null
+                available = false, dive = null,
+                coverRes = R.drawable.dive_cover_tawakkul
             ),
             DeepDiveDescriptor(
                 id = "shukr",
@@ -93,7 +103,8 @@ data class DeepDiveDescriptor(
                     "ہر نعمت کو یاد میں بدل دینا",
                     "تحويل كل نعمة إلى ذِكر"
                 ),
-                available = false, dive = null
+                available = false, dive = null,
+                coverRes = R.drawable.dive_cover_shukr
             ),
             DeepDiveDescriptor(
                 id = "ikhlas",
@@ -105,7 +116,8 @@ data class DeepDiveDescriptor(
                     "نیت کو صرف اللہ کے لیے خالص کرنا",
                     "إخلاص النية لله وحده"
                 ),
-                available = false, dive = null
+                available = false, dive = null,
+                coverRes = R.drawable.dive_cover_ikhlas
             ),
             DeepDiveDescriptor(
                 id = "taqwa",
@@ -117,7 +129,8 @@ data class DeepDiveDescriptor(
                     "وہ شعور جو دل کی حفاظت کرے",
                     "الوعي الذي يحرس القلب"
                 ),
-                available = false, dive = null
+                available = false, dive = null,
+                coverRes = R.drawable.dive_cover_taqwa
             ),
             DeepDiveDescriptor(
                 id = "rida",
@@ -129,7 +142,8 @@ data class DeepDiveDescriptor(
                     "اللہ کے فیصلے کو مطمئن دل سے قبول کرنا",
                     "لقاء قضاء الله بقلبٍ مطمئن"
                 ),
-                available = false, dive = null
+                available = false, dive = null,
+                coverRes = R.drawable.dive_cover_rida
             )
         )
 
@@ -154,7 +168,12 @@ data class SurahExperienceDescriptor(
     /** True when the experience is built and openable. False = "coming soon". */
     val available: Boolean,
     /** The experience content, present only when [available]. */
-    val dive: DeepDive?
+    val dive: DeepDive?,
+    /**
+     * Premium cover art. ONE field feeds every surface: shelf poster, list
+     * tile, descent threshold, descent veil, and the paywall hero context.
+     */
+    @DrawableRes val coverRes: Int
 ) {
     companion object {
         val all: List<SurahExperienceDescriptor> = listOf(
@@ -165,7 +184,8 @@ data class SurahExperienceDescriptor(
                 titleAr = "الْفَاتِحَة",
                 icon = Icons.Filled.Book,
                 subtitle = LocalizedText("The Opening - the prayer beneath every prayer"),
-                available = true, dive = surahFatihaDive
+                available = true, dive = surahFatihaDive,
+                coverRes = R.drawable.dive_cover_fatiha
             ),
             SurahExperienceDescriptor(
                 id = "surah-baqara",
@@ -174,7 +194,8 @@ data class SurahExperienceDescriptor(
                 titleAr = "الْبَقَرَة",
                 icon = Icons.Filled.AutoAwesome,
                 subtitle = LocalizedText("The Cow - the mirror inside the mightiest surah"),
-                available = true, dive = surahBaqaraDive
+                available = true, dive = surahBaqaraDive,
+                coverRes = R.drawable.dive_cover_baqara
             ),
             SurahExperienceDescriptor(
                 id = "surah-ali-imran",
@@ -183,16 +204,8 @@ data class SurahExperienceDescriptor(
                 titleAr = "آلِ عِمْرَان",
                 icon = Icons.Filled.Groups,
                 subtitle = LocalizedText("The Family of Imran - one chosen house, and the house that answered it"),
-                available = true, dive = surahAliImranDive
-            ),
-            SurahExperienceDescriptor(
-                id = "surah-nisa",
-                surahNumber = 4,
-                title = LocalizedText("Surah al-Nisa"),
-                titleAr = "النِّسَاء",
-                icon = Icons.Filled.AccountBalance,
-                subtitle = LocalizedText("The Women - one trust, from the orphan's coin to the seat of authority"),
-                available = true, dive = surahNisaDive
+                available = true, dive = surahAliImranDive,
+                coverRes = R.drawable.dive_cover_aliimran
             ),
             SurahExperienceDescriptor(
                 id = "surah-yusuf",
@@ -205,7 +218,8 @@ data class SurahExperienceDescriptor(
                     "بہترین قصہ - جدائی، صبر، وصال",
                     "أحسن القصص - فقدٌ وصبرٌ ولقاء"
                 ),
-                available = true, dive = surahYusufDive
+                available = true, dive = surahYusufDive,
+                coverRes = R.drawable.dive_cover_yusuf
             ),
             SurahExperienceDescriptor(
                 id = "surah-yasin",
@@ -218,7 +232,8 @@ data class SurahExperienceDescriptor(
                     "قرآن کا دل - اور اس کا آپ سے سوال",
                     "قلب القرآن - وما يسألك عنه"
                 ),
-                available = false, dive = null
+                available = false, dive = null,
+                coverRes = R.drawable.dive_cover_yasin
             ),
             SurahExperienceDescriptor(
                 id = "surah-rahman",
@@ -231,7 +246,8 @@ data class SurahExperienceDescriptor(
                     "ایک سوال، اکتیس بار",
                     "سؤالٌ واحد، إحدى وثلاثون مرة"
                 ),
-                available = false, dive = null
+                available = false, dive = null,
+                coverRes = R.drawable.dive_cover_rahman
             ),
             SurahExperienceDescriptor(
                 id = "surah-mulk",
@@ -244,11 +260,33 @@ data class SurahExperienceDescriptor(
                     "محافظ سورہ - بادشاہی کس کے ہاتھ میں ہے",
                     "السورة الحامية - بيد مَن الملك"
                 ),
-                available = false, dive = null
+                available = false, dive = null,
+                coverRes = R.drawable.dive_cover_mulk
             )
         )
 
-        fun byId(id: String): SurahExperienceDescriptor? = all.firstOrNull { it.id == id }
+        /**
+         * WITHDRAWN entries (iOS parity, 2026-07): pulled from every shelf,
+         * list, and surah-row strip until relaunched, but kept resolvable by
+         * id so old links and the shipped content stay intact.
+         */
+        val withdrawn: List<SurahExperienceDescriptor> = listOf(
+            SurahExperienceDescriptor(
+                id = "surah-nisa",
+                surahNumber = 4,
+                title = LocalizedText("Surah al-Nisa"),
+                titleAr = "النِّسَاء",
+                icon = Icons.Filled.AccountBalance,
+                subtitle = LocalizedText("The Women - one trust, from the orphan's coin to the seat of authority"),
+                available = true, dive = surahNisaDive,
+                coverRes = R.drawable.dive_cover_nisa
+            )
+        )
+
+        fun byId(id: String): SurahExperienceDescriptor? =
+            (all + withdrawn).firstOrNull { it.id == id }
+
+        /** Hub/list surfaces only ever see [all]; withdrawn entries stay hidden. */
         fun bySurahNumber(n: Int): SurahExperienceDescriptor? = all.firstOrNull { it.surahNumber == n }
     }
 }

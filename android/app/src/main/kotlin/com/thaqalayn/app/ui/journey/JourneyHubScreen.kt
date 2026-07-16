@@ -55,6 +55,9 @@ import com.thaqalayn.app.premium.PremiumManager
 import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
+import com.thaqalayn.app.ui.components.EmCoverTile
+import com.thaqalayn.app.ui.components.PosterCard
+import com.thaqalayn.app.ui.components.PosterEyebrow
 import com.thaqalayn.app.ui.components.EmGoldCTA
 import com.thaqalayn.app.ui.components.EmHeading
 import com.thaqalayn.app.ui.components.EmIconChip
@@ -117,11 +120,10 @@ fun JourneyHubScreen(navController: NavHostController) {
                     label = JourneyStrings.deepDives(lang),
                     items = DeepDiveDescriptor.all.map { d ->
                         DiveShelfItem(
-                            icon = d.icon,
+                            coverRes = d.coverRes,
                             available = d.available,
-                            status = diveShelfStatus(d.available, PremiumManager.canAccessDeepDive(d.id), lang),
+                            eyebrow = diveShelfEyebrow(d.available, PremiumManager.canAccessDeepDive(d.id), lang),
                             title = d.title.text(lang),
-                            description = d.subtitle.text(lang),
                             onTap = { handleDiveTap(d, lang, navController) { lockedAlert = it } }
                         )
                     },
@@ -134,11 +136,10 @@ fun JourneyHubScreen(navController: NavHostController) {
                     label = JourneyStrings.insideTheSurah(lang),
                     items = SurahExperienceDescriptor.all.map { d ->
                         DiveShelfItem(
-                            icon = d.icon,
+                            coverRes = d.coverRes,
                             available = d.available,
-                            status = diveShelfStatus(d.available, PremiumManager.canAccessSurahExperience(d.id), lang),
+                            eyebrow = diveShelfEyebrow(d.available, PremiumManager.canAccessSurahExperience(d.id), lang),
                             title = d.title.text(lang),
-                            description = d.subtitle.text(lang),
                             onTap = { handleSurahExperienceTap(d, lang, navController) { lockedAlert = it } }
                         )
                     },
@@ -245,7 +246,7 @@ fun AllDeepDivesScreen(navController: NavHostController) {
     ) {
         DeepDiveDescriptor.all.forEach { d ->
             DiveCard(
-                icon = d.icon,
+                cover = d.coverRes,
                 eyebrow = JourneyStrings.deepDiveEyebrow(lang),
                 locked = d.available && !PremiumManager.canAccessDeepDive(d.id),
                 title = d.title.text(lang),
@@ -274,7 +275,7 @@ fun AllSurahExperiencesScreen(navController: NavHostController) {
     ) {
         SurahExperienceDescriptor.all.forEach { d ->
             DiveCard(
-                icon = d.icon,
+                cover = d.coverRes,
                 eyebrow = JourneyStrings.surahJourneyEyebrow(lang),
                 locked = d.available && !PremiumManager.canAccessSurahExperience(d.id),
                 title = d.title.text(lang),
@@ -349,17 +350,19 @@ private fun SectionFullList(
     }
 }
 
-/** Shelf status eyebrow for a dive/experience card: READY | PREMIUM | SOON. */
-private fun diveShelfStatus(available: Boolean, canAccess: Boolean, lang: CommentaryLanguage): String =
+/** Poster eyebrow for a dive/experience card: READY | PREMIUM chip | SOON. */
+private fun diveShelfEyebrow(available: Boolean, canAccess: Boolean, lang: CommentaryLanguage): PosterEyebrow =
     when {
-        available && canAccess -> JourneyStrings.ready(lang)
-        available -> JourneyStrings.premium(lang)
-        else -> JourneyStrings.soon(lang)
+        available && canAccess -> PosterEyebrow.Status(JourneyStrings.ready(lang), active = true)
+        available -> PosterEyebrow.Premium(JourneyStrings.premium(lang))
+        else -> PosterEyebrow.Status(JourneyStrings.soon(lang), active = false)
     }
 
 /**
- * Available dives open their full-screen descent; premium-gated taps go to the
- * paywall; coming-soon dives reuse the locked overlay with an "on its way" note.
+ * Available dives open their full-screen descent - including premium-gated
+ * ones for non-subscribers, who preview the opening beats and meet the veil
+ * beat (the veil's CTA carries the cover to the paywall). Coming-soon dives
+ * reuse the locked overlay with an "on its way" note.
  */
 private fun handleDiveTap(
     d: DeepDiveDescriptor,
@@ -368,11 +371,7 @@ private fun handleDiveTap(
     showAlert: (LockedJourneyAlert) -> Unit
 ) {
     if (d.available) {
-        if (PremiumManager.canAccessDeepDive(d.id)) {
-            navController.navigate(Routes.deepDive(d.id))
-        } else {
-            navController.navigate(Routes.PAYWALL)
-        }
+        navController.navigate(Routes.deepDive(d.id))
     } else {
         showAlert(
             LockedJourneyAlert(
@@ -392,11 +391,7 @@ private fun handleSurahExperienceTap(
     showAlert: (LockedJourneyAlert) -> Unit
 ) {
     if (d.available) {
-        if (PremiumManager.canAccessSurahExperience(d.id)) {
-            navController.navigate(Routes.surahExperience(d.id))
-        } else {
-            navController.navigate(Routes.PAYWALL)
-        }
+        navController.navigate(Routes.surahExperience(d.id))
     } else {
         showAlert(
             LockedJourneyAlert(
@@ -518,6 +513,7 @@ private fun SacredSeasonsShelf(
     }
 }
 
+/** Journey shelf poster (iOS ShelfCard.posterFace): the cover carries the card. */
 @Composable
 private fun ShelfCard(
     descriptor: JourneyDescriptor,
@@ -525,66 +521,28 @@ private fun ShelfCard(
     lang: CommentaryLanguage,
     onTap: () -> Unit
 ) {
-    val colors = Theme.colors
-    val shape = RoundedCornerShape(18.dp)
-    val available = status.isActive
     val statusText = when (status) {
         is JourneyStatus.Active -> JourneyStrings.live(lang)
         is JourneyStatus.ComingSoon -> JourneyStrings.inDaysShort(status.daysUntil, lang)
         is JourneyStatus.Ended -> JourneyStrings.endedShort(lang)
     }
-
-    Column(
-        modifier = Modifier
-            .width(190.dp)
-            .fillMaxHeight()
-            .clip(shape)
-            .background(if (available) colors.glassSurfaceElevated else colors.glassSurface)
-            .border(
-                1.dp,
-                if (available) colors.accentColor.copy(alpha = 0.4f) else colors.strokeColor,
-                shape
-            )
-            .pressable(onClick = onTap)
-            .padding(14.dp)
-    ) {
-        EmIconChip(icon = journeyUiConfig(descriptor.id).icon, size = 40.dp, active = available)
-        Text(
-            text = statusText.uppercase(),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.6.sp,
-            color = if (available) colors.accentColor else colors.tertiaryText,
-            modifier = Modifier.padding(top = 10.dp)
-        )
-        Text(
-            text = JourneyStrings.title(descriptor.id, lang),
-            fontFamily = CormorantFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 19.sp,
-            color = colors.primaryText,
-            modifier = Modifier.padding(top = 2.dp)
-        )
-        Text(
-            text = JourneyStrings.seasonTagline(descriptor.id, lang),
-            fontSize = 12.sp,
-            lineHeight = 15.sp,
-            maxLines = 2,
-            color = if (available) colors.secondaryText else colors.tertiaryText,
-            modifier = Modifier.padding(top = 3.dp)
-        )
-    }
+    PosterCard(
+        cover = journeyUiConfig(descriptor.id).coverRes,
+        title = JourneyStrings.title(descriptor.id, lang),
+        eyebrow = PosterEyebrow.Status(statusText, active = status.isActive),
+        available = status.isActive,
+        onTap = onTap
+    )
 }
 
 // MARK: - Deep Dive / Inside-the-Surah shelf (iOS JourneyShelf reuse)
 
-/** One compact shelf card's data for the Deep Dives / Inside-the-Surah rows. */
+/** One poster card's data for the Deep Dives / Inside-the-Surah shelves. */
 private data class DiveShelfItem(
-    val icon: ImageVector,
+    val coverRes: Int,
     val available: Boolean,
-    val status: String,
+    val eyebrow: PosterEyebrow,
     val title: String,
-    val description: String,
     val onTap: () -> Unit
 )
 
@@ -645,49 +603,13 @@ private fun DiveShelf(
 
 @Composable
 private fun DiveShelfCard(item: DiveShelfItem) {
-    val colors = Theme.colors
-    val shape = RoundedCornerShape(18.dp)
-
-    Column(
-        modifier = Modifier
-            .width(190.dp)
-            .fillMaxHeight()
-            .clip(shape)
-            .background(if (item.available) colors.glassSurfaceElevated else colors.glassSurface)
-            .border(
-                1.dp,
-                if (item.available) colors.accentColor.copy(alpha = 0.4f) else colors.strokeColor,
-                shape
-            )
-            .pressable(onClick = item.onTap)
-            .padding(14.dp)
-    ) {
-        EmIconChip(icon = item.icon, size = 40.dp, active = item.available)
-        Text(
-            text = item.status.uppercase(),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.6.sp,
-            color = if (item.available) colors.accentColor else colors.tertiaryText,
-            modifier = Modifier.padding(top = 10.dp)
-        )
-        Text(
-            text = item.title,
-            fontFamily = CormorantFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 19.sp,
-            color = colors.primaryText,
-            modifier = Modifier.padding(top = 2.dp)
-        )
-        Text(
-            text = item.description,
-            fontSize = 12.sp,
-            lineHeight = 15.sp,
-            maxLines = 2,
-            color = if (item.available) colors.secondaryText else colors.tertiaryText,
-            modifier = Modifier.padding(top = 3.dp)
-        )
-    }
+    PosterCard(
+        cover = item.coverRes,
+        title = item.title,
+        eyebrow = item.eyebrow,
+        available = item.available,
+        onTap = item.onTap
+    )
 }
 
 // MARK: - Full-width dive/experience card (iOS DeepDiveCard / SurahExperienceCard)
@@ -700,7 +622,7 @@ private fun DiveShelfCard(item: DiveShelfItem) {
  */
 @Composable
 private fun DiveCard(
-    icon: ImageVector,
+    cover: Int,
     eyebrow: String,
     locked: Boolean,
     title: String,
@@ -725,7 +647,7 @@ private fun DiveCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            EmIconChip(icon = icon, active = available)
+            EmCoverTile(cover = cover, dimmed = !available)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -822,7 +744,7 @@ private fun JourneyCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            EmIconChip(icon = journeyUiConfig(descriptor.id).icon, active = status.isActive)
+            EmCoverTile(cover = journeyUiConfig(descriptor.id).coverRes)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)

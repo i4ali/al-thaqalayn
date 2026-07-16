@@ -61,6 +61,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.thaqalayn.app.R
+import com.thaqalayn.app.ui.components.rememberReduceMotion
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.min
@@ -71,6 +72,9 @@ import kotlin.random.Random
 fun HadithPage(isCurrent: Boolean, onAdvance: () -> Unit) {
     var isVisible by remember { mutableStateOf(false) }
     var videoFailed by remember { mutableStateOf(false) }
+    // Remove-animations accessibility: skip the video AND the embers layer;
+    // the static OnboardingBackground beneath carries the page.
+    val reduceMotion = rememberReduceMotion()
 
     LaunchedEffect(Unit) { isVisible = true }
 
@@ -96,7 +100,7 @@ fun HadithPage(isCurrent: Boolean, onAdvance: () -> Unit) {
     ) {
         OnboardingBackground()
 
-        if (!videoFailed) {
+        if (!reduceMotion && !videoFailed) {
             ShrineHeroVideoLayer(
                 isActive = isCurrent,
                 onError = { videoFailed = true },
@@ -104,7 +108,7 @@ fun HadithPage(isCurrent: Boolean, onAdvance: () -> Unit) {
                     .fillMaxSize()
                     .alpha(entrance.value)
             )
-        } else {
+        } else if (!reduceMotion) {
             FloatingEmbers(modifier = Modifier.fillMaxSize().alpha(entrance.value))
         }
 
@@ -303,6 +307,8 @@ private fun ShrineHeroVideoLayer(
                     this.player = player
                     useController = false
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    // Decorative loop - never hold the screen awake for it.
+                    keepScreenOn = false
                 }
             },
             modifier = Modifier.fillMaxSize()

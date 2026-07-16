@@ -1,6 +1,15 @@
 package com.thaqalayn.app.ui.paywall
 
 import android.app.Activity
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,20 +35,40 @@ import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.thaqalayn.app.R
+import com.thaqalayn.app.data.DeepDiveDescriptor
+import com.thaqalayn.app.data.SurahExperienceDescriptor
+import com.thaqalayn.app.ui.components.fullBleed
+import com.thaqalayn.app.ui.components.rememberReduceMotion
+import com.thaqalayn.app.ui.journey.journeyUiConfig
+import kotlinx.coroutines.delay
 import com.thaqalayn.app.premium.BillingManager
 import com.thaqalayn.app.premium.PremiumManager
 import com.thaqalayn.app.ui.components.EmDivider
@@ -64,11 +94,30 @@ private val layers = listOf(
 
 private data class FeatureRow(val icon: ImageVector, val title: String, val subtitle: String)
 
-/** Premium paywall: price-forward hero, 5-layer ladder, features, CTA (iOS PaywallView). */
+// Fixed light hero-text colors regardless of theme (the art is dark in both).
+private val PaywallIvory = Color(0xFFF1E8D6)
+private val PaywallGold = Color(0xFFECD49A)
+
+private val journeyIds = setOf("ramadan", "hajj", "muharram", "fatimiyya", "arbaeen")
+
+/**
+ * Resolve a locked entry's cover for the hero band (journey / deep-dive /
+ * surah-experience id). Null - unknown key or none - falls back to the dome.
+ */
+private fun paywallContextCover(key: String?): Int? = when {
+    key == null -> null
+    key in journeyIds -> journeyUiConfig(key).coverRes
+    else -> DeepDiveDescriptor.byId(key)?.coverRes
+        ?: SurahExperienceDescriptor.byId(key)?.coverRes
+}
+
+/** Premium paywall: art hero band, 5-layer ladder, features, CTA (iOS PaywallView). */
 @Composable
-fun PaywallScreen(navController: NavHostController) {
+fun PaywallScreen(navController: NavHostController, contextCoverKey: String? = null) {
     val colors = Theme.colors
     val activity = LocalContext.current as? Activity
+    val reduceMotion = rememberReduceMotion()
+    val contextCover = remember(contextCoverKey) { paywallContextCover(contextCoverKey) }
 
     // Close automatically once the purchase lands.
     LaunchedEffect(PremiumManager.isPremium) {
@@ -114,51 +163,63 @@ fun PaywallScreen(navController: NavHostController) {
                 verticalArrangement = Arrangement.spacedBy(22.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 2.dp, bottom = 140.dp)
             ) {
-                // Hero
+                // Hero: night-shrine art band with the pitch over it. The band
+                // escapes the column's 20dp padding and bleeds edge to edge.
                 item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            "THAQALAYN PREMIUM",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 3.sp,
-                            color = colors.accentColor
-                        )
-                        Text(
-                            "Everything.\nForever.",
-                            fontFamily = CormorantFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 44.sp,
-                            lineHeight = 48.sp,
-                            color = colors.primaryText,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            "One payment. No renewals. Yours for life.",
-                            fontSize = 14.sp,
-                            color = colors.secondaryText
-                        )
-                        BillingManager.priceText?.let { price ->
-                            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    price,
-                                    fontFamily = CormorantFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 40.sp,
-                                    color = colors.accentBright
-                                )
-                                Text(
-                                    "ONE-TIME",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.5.sp,
-                                    color = colors.tertiaryText,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
+                    Box(modifier = Modifier.fullBleed(horizontal = 20.dp)) {
+                        PaywallHeroBand(contextCover = contextCover, reduceMotion = reduceMotion)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp)
+                                .padding(top = 26.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                "THAQALAYN PREMIUM",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 3.sp,
+                                color = PaywallGold,
+                                style = heroTextShadow(blur = 8f)
+                            )
+                            Text(
+                                "Everything.\nForever.",
+                                fontFamily = CormorantFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 44.sp,
+                                lineHeight = 48.sp,
+                                color = PaywallIvory,
+                                textAlign = TextAlign.Center,
+                                style = heroTextShadow(blur = 14f)
+                            )
+                            Text(
+                                "One payment. No renewals. Yours for life.",
+                                fontSize = 14.sp,
+                                color = PaywallIvory.copy(alpha = 0.85f),
+                                style = heroTextShadow(blur = 8f)
+                            )
+                            rememberCountUpPrice(BillingManager.priceText, reduceMotion)?.let { price ->
+                                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        price,
+                                        fontFamily = CormorantFamily,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 40.sp,
+                                        color = PaywallGold,
+                                        style = heroTextShadow(blur = 12f)
+                                    )
+                                    Text(
+                                        "ONE-TIME",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.5.sp,
+                                        color = PaywallIvory.copy(alpha = 0.7f),
+                                        modifier = Modifier.padding(bottom = 8.dp),
+                                        style = heroTextShadow(blur = 8f)
+                                    )
+                                }
                             }
                         }
                     }
@@ -168,7 +229,8 @@ fun PaywallScreen(navController: NavHostController) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         EmDivider(label = "5 Layers of Tafsir")
-                        layers.forEach { layer ->
+                        layers.forEachIndexed { cascadeIndex, layer ->
+                            CascadeIn(index = cascadeIndex, reduceMotion = reduceMotion) {
                             val shape = RoundedCornerShape(14.dp)
                             Row(
                                 modifier = Modifier
@@ -209,6 +271,7 @@ fun PaywallScreen(navController: NavHostController) {
                                     Text(layer.tagline, fontSize = 12.sp, color = colors.tertiaryText)
                                 }
                             }
+                            }
                         }
                     }
                 }
@@ -217,7 +280,8 @@ fun PaywallScreen(navController: NavHostController) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         EmDivider(label = "Everything Included")
-                        features.forEach { feature ->
+                        features.forEachIndexed { cascadeIndex, feature ->
+                            CascadeIn(index = layers.size + cascadeIndex, reduceMotion = reduceMotion) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -235,6 +299,7 @@ fun PaywallScreen(navController: NavHostController) {
                                     Text(feature.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = colors.primaryText)
                                     Text(feature.subtitle, fontSize = 12.sp, color = colors.tertiaryText)
                                 }
+                            }
                             }
                         }
                     }
@@ -327,4 +392,115 @@ fun PaywallScreen(navController: NavHostController) {
             }
         }
     }
+}
+
+// MARK: - Hero band + paywall motion (iOS PaywallView hero)
+
+/**
+ * 348dp full-width hero band. The art fades to transparent into the screen
+ * background via an alpha mask (same technique as the Explore covers - NOT a
+ * dark scrim). Dome crops center; portrait context covers crop from the top so
+ * the composed sky stays in frame. Ken Burns drift: 1.0 -> 1.09, 22s per leg,
+ * autoreversing, anchored away from the headline; skipped with reduce motion.
+ */
+@Composable
+private fun PaywallHeroBand(contextCover: Int?, reduceMotion: Boolean) {
+    val art = contextCover ?: R.drawable.paywall_hero_dome
+    val isContext = contextCover != null
+    val mask = remember {
+        Brush.verticalGradient(
+            0.00f to Color.Black.copy(alpha = 0.72f),
+            0.12f to Color.Black,
+            0.55f to Color.Black,
+            1.00f to Color.Transparent
+        )
+    }
+
+    val drift: Float = if (reduceMotion) 1f else {
+        val transition = rememberInfiniteTransition(label = "heroDrift")
+        transition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.09f,
+            animationSpec = infiniteRepeatable(
+                tween(22_000, easing = EaseInOut),
+                RepeatMode.Reverse
+            ),
+            label = "heroDrift"
+        ).value
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(348.dp)
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+            .drawWithContent {
+                drawContent()
+                drawRect(brush = mask, blendMode = BlendMode.DstIn)
+            }
+            .clipToBounds()
+    ) {
+        Image(
+            painter = painterResource(art),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            alignment = if (isContext) Alignment.TopCenter else Alignment.Center,
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer {
+                    scaleX = drift
+                    scaleY = drift
+                    transformOrigin = TransformOrigin(0.5f, if (isContext) 0f else 0.5f)
+                }
+        )
+    }
+}
+
+/** Black drop shadow that keeps the fixed light hero text legible over art. */
+private fun heroTextShadow(blur: Float) = TextStyle(
+    shadow = Shadow(
+        color = Color.Black.copy(alpha = 0.5f),
+        offset = Offset(0f, 1f),
+        blurRadius = blur
+    )
+)
+
+/** Entrance cascade: fade in + rise 14dp, ease-out 0.5s, staggered 50ms/row. */
+@Composable
+private fun CascadeIn(index: Int, reduceMotion: Boolean, content: @Composable () -> Unit) {
+    val progress = remember { Animatable(if (reduceMotion) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        if (!reduceMotion) {
+            delay(index * 50L)
+            progress.animateTo(1f, tween(500, easing = EaseOut))
+        }
+    }
+    Box(
+        modifier = Modifier.graphicsLayer {
+            alpha = progress.value
+            translationY = (1f - progress.value) * 14.dp.toPx()
+        }
+    ) {
+        content()
+    }
+}
+
+/**
+ * Price count-up: the numeric part animates 0 -> price, ease-out 0.7s,
+ * re-running if the store price loads after the screen appears. Falls back to
+ * the raw string when the price cannot be parsed.
+ */
+@Composable
+private fun rememberCountUpPrice(price: String?, reduceMotion: Boolean): String? {
+    if (price == null) return null
+    if (reduceMotion) return price
+    val match = remember(price) { Regex("""\d[\d.,]*""").find(price) } ?: return price
+    val raw = match.value
+    val decimals = if ('.' in raw) raw.substringAfterLast('.').length.coerceAtMost(2) else 0
+    val target = raw.replace(",", "").toFloatOrNull() ?: return price
+    val anim = remember(price) { Animatable(0f) }
+    LaunchedEffect(price) { anim.animateTo(target, tween(700, easing = EaseOut)) }
+    // Once settled, show the store's exact string (locale separators intact).
+    if (anim.value >= target) return price
+    return price.replaceRange(match.range, String.format("%,.${decimals}f", anim.value))
 }

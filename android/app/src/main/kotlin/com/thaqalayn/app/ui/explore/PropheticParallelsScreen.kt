@@ -79,6 +79,8 @@ import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmIconChip
+import com.thaqalayn.app.R
+import com.thaqalayn.app.ui.components.CoverHeaderBand
 import com.thaqalayn.app.ui.components.ThemedBackground
 import com.thaqalayn.app.ui.components.pressable
 import com.thaqalayn.app.ui.theme.CormorantFamily
@@ -168,6 +170,11 @@ fun PropheticParallelsScreen(navController: NavHostController) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
+        // Midnight Emerald only: night-shrine band behind the fixed header
+        // (bleeds behind the status bar; decorative).
+        if (Theme.colors.isMidnightEmerald) {
+            CoverHeaderBand(art = R.drawable.explore_cover_prophetic_parallels, height = 280.dp)
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()

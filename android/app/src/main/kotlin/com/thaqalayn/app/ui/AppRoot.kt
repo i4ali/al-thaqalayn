@@ -28,6 +28,7 @@ import com.thaqalayn.app.NotificationDeepLinks
 import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.data.DeepDiveDescriptor
 import com.thaqalayn.app.data.ProgressManager
+import com.thaqalayn.app.premium.PremiumManager
 import com.thaqalayn.app.data.SurahExperienceDescriptor
 import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.OnboardingManager
@@ -42,6 +43,7 @@ import com.thaqalayn.app.ui.journey.AllSurahExperiencesScreen
 import com.thaqalayn.app.ui.journey.JourneyDayDetailScreen
 import com.thaqalayn.app.ui.journey.JourneyHubScreen
 import com.thaqalayn.app.ui.journey.JourneyScreen
+import com.thaqalayn.app.ui.journey.VeiledDayPreviewScreen
 import com.thaqalayn.app.ui.paywall.PaywallScreen
 import com.thaqalayn.app.ui.progress.ProgressScreen
 import com.thaqalayn.app.ui.quiz.QuizScreen
@@ -79,7 +81,7 @@ object Routes {
     const val BOOKMARKS = "bookmarks"
     const val SETTINGS = "settings"
     const val NOTIFICATIONS = "notifications"
-    const val PAYWALL = "paywall"
+    const val PAYWALL = "paywall?cover={cover}"
     const val CHALLENGE = "challenge"
     const val CROSSWORD = "crossword"
     const val DUA = "dua/{id}"
@@ -105,6 +107,7 @@ object Routes {
     const val JOURNEYS_ALL = "journeysAll"
     const val JOURNEY = "journey/{id}"
     const val JOURNEY_DAY = "journeyDay/{id}/{day}"
+    const val JOURNEY_DAY_PREVIEW = "journeyDayPreview/{id}/{day}"
     const val DEEP_DIVES_ALL = "deepDivesAll"
     const val DEEP_DIVE = "deepDive/{id}"
     const val SURAH_EXPERIENCES_ALL = "surahExperiencesAll"
@@ -113,11 +116,19 @@ object Routes {
     fun surah(number: Int, verse: Int? = null) =
         "surah/$number" + (verse?.let { "?verse=$it" } ?: "")
 
+    /**
+     * Paywall, optionally carrying the locked entry's cover as hero context
+     * (a journey / deep-dive / surah-experience id; see paywallContextCover).
+     */
+    fun paywall(coverKey: String? = null) =
+        "paywall" + (coverKey?.let { "?cover=$it" } ?: "")
+
     fun quiz(surah: Int) = "quiz/$surah"
 
     fun dua(id: String) = "dua/$id"
     fun journey(id: String) = "journey/$id"
     fun journeyDay(id: String, day: Int) = "journeyDay/$id/$day"
+    fun journeyDayPreview(id: String, day: Int) = "journeyDayPreview/$id/$day"
     fun deepDive(id: String) = "deepDive/$id"
     fun surahExperience(id: String) = "surahExperience/$id"
     fun lifeMoment(id: String) = "lifeMoment/$id"
@@ -235,6 +246,19 @@ private fun AppNavHost(navController: NavHostController) {
             )
         }
         composable(
+            route = Routes.JOURNEY_DAY_PREVIEW,
+            arguments = listOf(
+                navArgument("id") { type = NavType.StringType },
+                navArgument("day") { type = NavType.IntType }
+            )
+        ) { entry ->
+            VeiledDayPreviewScreen(
+                journeyId = entry.arguments?.getString("id") ?: "",
+                dayNumber = entry.arguments?.getInt("day") ?: 1,
+                navController = navController
+            )
+        }
+        composable(
             route = Routes.JOURNEY_DAY,
             arguments = listOf(
                 navArgument("id") { type = NavType.StringType },
@@ -258,8 +282,16 @@ private fun AppNavHost(navController: NavHostController) {
             arguments = listOf(navArgument("id") { type = NavType.StringType })
         ) { entry ->
             val id = entry.arguments?.getString("id") ?: ""
-            DeepDiveDescriptor.byId(id)?.dive?.let { dive ->
-                DeepDiveScreen(dive = dive, onClose = { navController.popBackStack() })
+            val descriptor = DeepDiveDescriptor.byId(id)
+            descriptor?.dive?.let { dive ->
+                DeepDiveScreen(
+                    dive = dive,
+                    onClose = { navController.popBackStack() },
+                    coverRes = descriptor.coverRes,
+                    // Non-subscribers preview the opening beats, then the veil.
+                    locked = !PremiumManager.canAccessDeepDive(descriptor.id),
+                    onUnlock = { navController.navigate(Routes.paywall(coverKey = descriptor.id)) }
+                )
             }
         }
         composable(
@@ -277,7 +309,10 @@ private fun AppNavHost(navController: NavHostController) {
                         // (iOS posts .navigateToVerse; here we just swap screens).
                         navController.popBackStack()
                         navController.navigate(Routes.surah(descriptor.surahNumber, 1))
-                    }
+                    },
+                    coverRes = descriptor.coverRes,
+                    locked = !PremiumManager.canAccessSurahExperience(descriptor.id),
+                    onUnlock = { navController.navigate(Routes.paywall(coverKey = descriptor.id)) }
                 )
             }
         }
@@ -305,8 +340,16 @@ private fun AppNavHost(navController: NavHostController) {
                 navController = navController
             )
         }
-        composable(Routes.PAYWALL) {
-            PaywallScreen(navController)
+        composable(
+            route = Routes.PAYWALL,
+            arguments = listOf(
+                navArgument("cover") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) { entry ->
+            PaywallScreen(
+                navController = navController,
+                contextCoverKey = entry.arguments?.getString("cover")
+            )
         }
         composable(Routes.CHALLENGE) {
             DailyChallengeScreen(navController)

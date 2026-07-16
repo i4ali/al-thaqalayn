@@ -1,6 +1,9 @@
 package com.thaqalayn.app.ui.today
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -34,11 +38,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -318,9 +327,166 @@ private fun HijriDatePill() {
     )
 }
 
-/** Refined gold hero - gold-gradient block with near-black serif text (iOS EmDailyReminderHero). */
+/**
+ * Hijri season -> Today hero art (iOS ReminderSeason.current(month:day:)).
+ * Everyday art fills the gaps so the Midnight Emerald card always has a cover.
+ */
+private fun seasonalHeroRes(): Int {
+    val (_, month, day) = IslamicCalendarManager.currentIslamicDate()
+    return when {
+        month == 9 -> R.drawable.today_hero_ramadan
+        month == 12 -> R.drawable.today_hero_hajj
+        month == 1 && day <= 10 -> R.drawable.today_hero_muharram
+        month == 1 -> R.drawable.today_hero_arbaeen
+        month == 2 && day <= 20 -> R.drawable.today_hero_arbaeen
+        month == 5 && day in 8..15 -> R.drawable.today_hero_fatimiyya
+        else -> R.drawable.today_hero_everyday
+    }
+}
+
+/**
+ * The daily-verse hero. Midnight Emerald: seasonal night-shrine art with the
+ * legibility scrims (iOS EmDailyReminderHero). Standard theme: the flat
+ * gold-gradient banner, unchanged.
+ */
 @Composable
 private fun DailyReminderHero(
+    headline: String,
+    sourceLabel: String,
+    lang: CommentaryLanguage,
+    onTap: () -> Unit
+) {
+    if (Theme.colors.isMidnightEmerald) {
+        SeasonalReminderHero(headline, sourceLabel, lang, onTap)
+    } else {
+        GoldReminderHero(headline, sourceLabel, lang, onTap)
+    }
+}
+
+private val HeroBase = Color(0xFF06110D)
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun SeasonalReminderHero(
+    headline: String,
+    sourceLabel: String,
+    lang: CommentaryLanguage,
+    onTap: () -> Unit
+) {
+    val colors = Theme.colors
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val shape = RoundedCornerShape(22.dp)
+    val isRtl = lang.isRTL
+
+    // Horizontal legibility scrim: darkens the text side, leaves the warm
+    // focal glow on the far side. Reversed for RTL, where the text sits at
+    // the right edge (the art is mirrored instead - see below).
+    val sideScrim =
+        if (isRtl) Brush.horizontalGradient(
+            0.16f to Color.Transparent,
+            0.36f to Color.Black.copy(alpha = 0.16f),
+            0.62f to Color.Black.copy(alpha = 0.60f),
+            1.00f to Color.Black.copy(alpha = 0.88f)
+        )
+        else Brush.horizontalGradient(
+            0.00f to Color.Black.copy(alpha = 0.88f),
+            0.38f to Color.Black.copy(alpha = 0.60f),
+            0.64f to Color.Black.copy(alpha = 0.16f),
+            0.84f to Color.Transparent
+        )
+    val bottomScrim = Brush.verticalGradient(
+        0.5f to Color.Transparent,
+        1.0f to HeroBase.copy(alpha = 0.5f)
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 136.dp)
+            .shadow(20.dp, shape, ambientColor = Color.Black.copy(alpha = 0.42f), spotColor = Color.Black.copy(alpha = 0.42f))
+            .clip(shape)
+            .background(HeroBase)
+            .border(1.dp, colors.accentColor.copy(alpha = 0.14f), shape)
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onTap,
+                // Long-press exposes share (iOS parity).
+                onLongClick = {
+                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(android.content.Intent.EXTRA_TEXT, "“$headline” - $sourceLabel")
+                    }
+                    context.startActivity(android.content.Intent.createChooser(send, null))
+                }
+            )
+    ) {
+        Image(
+            painter = painterResource(seasonalHeroRes()),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .matchParentSize()
+                // RTL: mirror the ART so its dark side stays under the text;
+                // scrims and text follow layout direction as normal.
+                .graphicsLayer { if (isRtl) scaleX = -1f }
+        )
+        Box(modifier = Modifier.matchParentSize().background(sideScrim))
+        Box(modifier = Modifier.matchParentSize().background(bottomScrim))
+
+        CompositionLocalProvider(
+            LocalLayoutDirection provides if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(
+                        Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = colors.accentBright,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = TodayStrings.reminderEyebrow(lang).uppercase(),
+                        fontSize = if (isRtl) 13.sp else 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = if (isRtl) 0.sp else 1.3.sp,
+                        color = colors.accentBright
+                    )
+                }
+                Text(
+                    text = "“$headline”",
+                    fontFamily = if (lang == CommentaryLanguage.URDU) AmiriFamily else CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = if (lang == CommentaryLanguage.URDU) 22.sp else 24.sp,
+                    lineHeight = if (lang == CommentaryLanguage.URDU) 34.sp else 30.sp,
+                    color = colors.primaryText,
+                    style = androidx.compose.ui.text.TextStyle(
+                        shadow = androidx.compose.ui.graphics.Shadow(
+                            color = Color.Black.copy(alpha = 0.55f),
+                            offset = androidx.compose.ui.geometry.Offset(0f, 1f),
+                            blurRadius = 10f
+                        )
+                    )
+                )
+                Text(
+                    text = sourceLabel,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.primaryText.copy(alpha = 0.72f)
+                )
+            }
+        }
+    }
+}
+
+/** Refined gold hero - gold-gradient block with near-black serif text (iOS EmDailyReminderHero). */
+@Composable
+private fun GoldReminderHero(
     headline: String,
     sourceLabel: String,
     lang: CommentaryLanguage,

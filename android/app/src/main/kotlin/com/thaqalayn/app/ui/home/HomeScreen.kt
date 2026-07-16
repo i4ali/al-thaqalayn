@@ -188,7 +188,7 @@ fun HomeScreen(navController: NavHostController) {
                         lang = lang,
                         onOpenSurah = { navController.navigate(Routes.surah(surah.number)) },
                         onOpenExperience = { navController.navigate(Routes.surahExperience(it)) },
-                        onShowPaywall = { navController.navigate(Routes.PAYWALL) }
+                        onShowPaywall = { navController.navigate(Routes.paywall()) }
                     )
                 }
             } else {
@@ -199,7 +199,7 @@ fun HomeScreen(navController: NavHostController) {
                         onOpenSurah = { navController.navigate(Routes.surah(it)) },
                         onOpenVerse = { s, v -> navController.navigate(Routes.surah(s, v)) },
                         onOpenExperience = { navController.navigate(Routes.surahExperience(it)) },
-                        onShowPaywall = { navController.navigate(Routes.PAYWALL) }
+                        onShowPaywall = { navController.navigate(Routes.paywall()) }
                     )
                 }
             }

@@ -189,7 +189,7 @@ fun FullScreenCommentaryScreen(
                                 locked = !PremiumManager.canAccessLayer(layer, surah.number),
                                 onClick = {
                                     if (!PremiumManager.canAccessLayer(layer, surah.number)) {
-                                        navController.navigate(Routes.PAYWALL)
+                                        navController.navigate(Routes.paywall())
                                     } else {
                                         selectedLayer = layer
                                     }

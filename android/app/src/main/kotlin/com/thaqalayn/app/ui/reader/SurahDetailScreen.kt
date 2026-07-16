@@ -187,7 +187,7 @@ fun SurahDetailScreen(
                                     if (PremiumManager.canAccessQuiz(data.surah.number)) {
                                         navController.navigate(Routes.quiz(data.surah.number))
                                     } else {
-                                        navController.navigate(Routes.PAYWALL)
+                                        navController.navigate(Routes.paywall())
                                     }
                                 }
                             )
@@ -198,14 +198,14 @@ fun SurahDetailScreen(
                                 surah = data.surah,
                                 onGems = {
                                     if (!PremiumManager.canAccessOverview(data.surah.number)) {
-                                        navController.navigate(Routes.PAYWALL)
+                                        navController.navigate(Routes.paywall())
                                     } else if (verse.tafsir != null) {
                                         navController.navigate("summary/${data.surah.number}/${verse.number}")
                                     }
                                 },
                                 onInDepth = {
                                     if (!PremiumManager.canAccessTafsir(data.surah.number)) {
-                                        navController.navigate(Routes.PAYWALL)
+                                        navController.navigate(Routes.paywall())
                                     } else if (verse.tafsir != null) {
                                         navController.navigate("commentary/${data.surah.number}/${verse.number}")
                                     }

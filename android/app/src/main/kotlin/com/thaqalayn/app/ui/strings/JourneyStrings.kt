@@ -171,6 +171,34 @@ object JourneyStrings {
     fun completed(l: CommentaryLanguage) = pick(l, "Completed", "مکمل", "مكتمل")
     fun markComplete(l: CommentaryLanguage) = pick(l, "Mark as complete", "مکمل کریں", "سجّله مكتملاً")
 
+    // MARK: - Veiled locked-day preview (iOS VeiledDayPreview)
+    fun waitsInside(l: CommentaryLanguage) =
+        pick(l, "What waits inside", "اندر کیا منتظر ہے", "ما الذي ينتظرك في الداخل")
+    fun aDuaForThisDay(l: CommentaryLanguage) =
+        pick(l, "A dua for this day", "اس دن کی دعا", "دعاء هذا اليوم")
+    fun versesWithReflections(n: Int, l: CommentaryLanguage) = pick(
+        l,
+        "$n verse${if (n == 1) "" else "s"} with reflections",
+        "$n آیات مع تدبر",
+        "$n آيات مع تأملات"
+    )
+    fun aGuidedReflection(l: CommentaryLanguage) =
+        pick(l, "A guided reflection", "رہنما غور و فکر", "تأمل موجه")
+    fun premiumDayNote(l: CommentaryLanguage) = pick(
+        l,
+        "This day is part of the premium journey. One payment unlocks every day, forever.",
+        "یہ دن پریمیئم سفر کا حصہ ہے۔ ایک ادائیگی سے ہر دن ہمیشہ کے لیے کھل جاتا ہے۔",
+        "هذا اليوم جزء من الرحلة المميزة. دفعة واحدة تفتح كل الأيام، للأبد."
+    )
+    fun premiumDescentNote(l: CommentaryLanguage) = pick(
+        l,
+        "The descent continues with Premium. One payment unlocks everything, forever.",
+        "یہ سفر پریمیئم کے ساتھ جاری رہتا ہے۔ ایک ادائیگی سے سب کچھ ہمیشہ کے لیے کھل جاتا ہے۔",
+        "يستمر النزول مع بريميوم. دفعة واحدة تفتح كل شيء، للأبد."
+    )
+    fun unlockPremium(l: CommentaryLanguage) =
+        pick(l, "Unlock Premium", "پریمیئم کھولیں", "افتح بريميوم")
+
     // Journey-complete notes (header completion badge, Ramadan/Hajj only)
     fun journeyCompleteNote(id: String, l: CommentaryLanguage): String? = when (id) {
         "ramadan" -> pick(

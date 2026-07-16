@@ -1,6 +1,7 @@
 package com.thaqalayn.app.ui.explore
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -38,6 +39,8 @@ import androidx.navigation.NavHostController
 import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
+import com.thaqalayn.app.R
+import com.thaqalayn.app.ui.components.CoverHeaderBand
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmDivider
 import com.thaqalayn.app.ui.components.EmHeading
@@ -202,28 +205,43 @@ private fun subtitle(language: CommentaryLanguage): String = when (language) {
 /** The Explore tab: table-of-contents hub for the discovery features. */
 @Composable
 fun ExploreScreen(navController: NavHostController) {
+    val colors = Theme.colors
     val lang = CommentaryLanguageManager.selectedLanguage
     val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
+    // Cover art is Midnight Emerald only; the standard theme keeps the plain header.
+    val hasCover = colors.isMidnightEmerald
 
     CompositionLocalProvider(LocalLayoutDirection provides direction) {
+        // No statusBarsPadding on the list itself: the header band bleeds
+        // behind the status bar and scrolls off with the content.
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding(),
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(22.dp),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 120.dp)
+            contentPadding = PaddingValues(bottom = 120.dp)
         ) {
             item {
-                EmHeading(
-                    eyebrow = eyebrow(lang),
-                    title = title(lang),
-                    sub = subtitle(lang)
-                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    if (hasCover) {
+                        CoverHeaderBand(art = R.drawable.explore_cover, height = 440.dp)
+                    }
+                    EmHeading(
+                        eyebrow = eyebrow(lang),
+                        title = title(lang),
+                        sub = subtitle(lang),
+                        modifier = Modifier
+                            .statusBarsPadding()
+                            .padding(horizontal = 20.dp)
+                            .padding(top = if (hasCover) 62.dp else 16.dp)
+                    )
+                }
             }
 
             exploreSections.forEach { section ->
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    ) {
                         EmDivider(label = section.title(lang))
                         section.items.forEach { rowItem ->
                             ExploreRow(

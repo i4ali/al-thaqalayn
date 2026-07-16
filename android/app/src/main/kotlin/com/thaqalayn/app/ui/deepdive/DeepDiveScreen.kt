@@ -10,6 +10,8 @@ package com.thaqalayn.app.ui.deepdive
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -57,7 +59,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -78,6 +82,7 @@ import com.thaqalayn.app.model.Verse
 import com.thaqalayn.app.model.VerseWithTafsir
 import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
+import com.thaqalayn.app.ui.components.CoverVeil
 import com.thaqalayn.app.ui.components.DuaListenButton
 import com.thaqalayn.app.ui.components.pressable
 import com.thaqalayn.app.ui.strings.JourneyStrings
@@ -99,22 +104,55 @@ fun DeepDiveScreen(
      * Present on surah experiences: invoked by the closing beat's
      * "Read the full surah" button. null hides the button (theme dives).
      */
-    onReadSurah: (() -> Unit)? = null
+    onReadSurah: (() -> Unit)? = null,
+    /** The entry's premium cover: threshold doorway + locked veil. */
+    coverRes: Int? = null,
+    /**
+     * True for a premium descent opened by a non-subscriber: only the opening
+     * beats render, then the veil beat with the upgrade CTA ([onUnlock]).
+     */
+    locked: Boolean = false,
+    onUnlock: () -> Unit = {}
 ) {
     val lang = CommentaryLanguageManager.selectedLanguage
-    val pagerState = rememberPagerState { dive.sections.size }
+    // Non-subscribers preview the opening beats; the veil is the final beat.
+    val previewCount = minOf(2, dive.sections.size)
+    val pageCount = if (locked) previewCount + 1 else dive.sections.size
+    val pagerState = rememberPagerState(
+        // Purchase mid-descent grows pageCount live; clamp against both.
+        pageCount = { if (locked) previewCount + 1 else dive.sections.size }
+    )
     val scope = rememberCoroutineScope()
     // First depth starts open so the "tap to open" gesture is obvious.
     var openDepths by remember { mutableStateOf(setOf(0)) }
     var saidAmin by remember { mutableStateOf(false) }
 
-    val progress = ((pagerState.currentPage + pagerState.currentPageOffsetFraction) /
-        max(dive.sections.size - 1, 1).toFloat()).coerceIn(0f, 1f)
+    val pagesScrolled = pagerState.currentPage + pagerState.currentPageOffsetFraction
+    val progress = (pagesScrolled / max(pageCount - 1, 1).toFloat()).coerceIn(0f, 1f)
 
     Box(modifier = Modifier.fillMaxSize()) {
         DeepDiveBackground(progress = progress)
 
+        // The cover is the doorway behind the opening beat: it dissolves as
+        // the reader sinks past the first beat (iOS DeepDiveView threshold).
+        if (coverRes != null) {
+            val thresholdAlpha = (1f - pagesScrolled / 0.85f).coerceIn(0f, 1f)
+            if (thresholdAlpha > 0f) {
+                ThresholdCover(art = coverRes, coverAlpha = thresholdAlpha)
+            }
+        }
+
         VerticalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { index ->
+            if (locked && index >= previewCount) {
+                DescentVeilPage(
+                    art = coverRes,
+                    dive = dive,
+                    lang = lang,
+                    show = pagerState.currentPage >= index,
+                    onUnlock = onUnlock
+                )
+                return@VerticalPager
+            }
             val section = dive.sections[index]
             val show = pagerState.currentPage >= index
             DivePage(dive, section, show, lang,
@@ -1183,6 +1221,128 @@ private fun ClosingPage(
                         fontSize = 11.sp,
                         letterSpacing = 2.sp,
                         color = DeepDivePalette.gold
+                    )
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Threshold cover + locked veil (premium art)
+
+/**
+ * The cover as the "doorway" behind the opening beat (iOS DeepDiveView
+ * threshold): full-bleed art over the #040A07 base, washed by a vertical
+ * black gradient that lets the art glow through the middle, plus a radial
+ * vignette. The caller drives [coverAlpha] from the pager scroll.
+ */
+@Composable
+private fun ThresholdCover(art: Int, coverAlpha: Float) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer { alpha = coverAlpha }
+            .background(Color(0xFF040A07))
+    ) {
+        Image(
+            painter = painterResource(art),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize()
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        0.00f to Color.Black.copy(alpha = 0.50f),
+                        0.34f to Color.Black.copy(alpha = 0.66f),
+                        0.62f to Color.Black.copy(alpha = 0.74f),
+                        1.00f to Color.Black.copy(alpha = 0.60f)
+                    )
+                )
+        )
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawRect(
+                brush = Brush.radialGradient(
+                    0.32f to Color.Transparent,
+                    1.00f to Color.Black.copy(alpha = 0.55f),
+                    center = center,
+                    radius = max(size.width, size.height) * 0.62f
+                )
+            )
+        }
+    }
+}
+
+/**
+ * The final beat of a locked premium descent: the same veil recipe as the
+ * journey locked-day preview but with the lighter 0.46 overlay (this veil
+ * carries less text). The CTA opens the paywall with this dive's cover.
+ */
+@Composable
+private fun DescentVeilPage(
+    art: Int?,
+    dive: DeepDive,
+    lang: CommentaryLanguage,
+    show: Boolean,
+    onUnlock: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (art != null) {
+            CoverVeil(art = art, overlayAlpha = 0.46f, modifier = Modifier.fillMaxSize())
+        }
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .widthIn(max = 480.dp)
+                .padding(horizontal = 30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Reveal(show) {
+                Text(
+                    text = JourneyStrings.premium(lang).uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 4.sp,
+                    textAlign = TextAlign.Center,
+                    color = DeepDivePalette.gold
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            Reveal(show, 0.2) { ArabicText(dive.titleAr, 52f, DeepDivePalette.goldBright) }
+            Spacer(modifier = Modifier.height(12.dp))
+            Reveal(show, 0.4) { SerifText(dive.titleEn, 32f, DeepDivePalette.cream) }
+            Reveal(show, 0.6) { Box(modifier = Modifier.padding(vertical = 26.dp)) { Hairline() } }
+            Reveal(show, 0.6) {
+                Text(
+                    text = JourneyStrings.premiumDescentNote(lang),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Center,
+                    color = DeepDivePalette.mute,
+                    modifier = Modifier.widthIn(max = 320.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(30.dp))
+            Reveal(show, 0.85) {
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(DeepDivePalette.gold, DeepDivePalette.goldBright)
+                            )
+                        )
+                        .pressable(onClick = onUnlock)
+                        .padding(horizontal = 28.dp, vertical = 14.dp)
+                ) {
+                    Text(
+                        text = JourneyStrings.unlockPremium(lang),
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.sp,
+                        color = Color(0xFF1F1708)
                     )
                 }
             }

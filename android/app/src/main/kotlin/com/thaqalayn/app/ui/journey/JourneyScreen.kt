@@ -1,6 +1,5 @@
 package com.thaqalayn.app.ui.journey
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -29,15 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -51,6 +43,7 @@ import com.thaqalayn.app.model.JourneyDay
 import com.thaqalayn.app.premium.PremiumManager
 import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
+import com.thaqalayn.app.ui.components.CoverHeaderBand
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmIconChip
 import com.thaqalayn.app.ui.components.EmNumeralCircle
@@ -111,7 +104,11 @@ fun JourneyScreen(journeyId: String, navController: NavHostController) {
                                 if (PremiumManager.canAccessJourneyDay(day.dayNumber)) {
                                     navController.navigate(Routes.journeyDay(journeyId, day.dayNumber))
                                 } else {
-                                    navController.navigate(Routes.PAYWALL)
+                                    // Locked days open the veiled preview, not
+                                    // the bare paywall (iOS VeiledDayPreview).
+                                    navController.navigate(
+                                        Routes.journeyDayPreview(journeyId, day.dayNumber)
+                                    )
                                 }
                             }
                         )
@@ -147,29 +144,15 @@ private fun JourneyHeader(
         else null
     val percent = manager.completionPercentage
 
+    // Header-band art is Midnight Emerald only; the standard theme keeps the
+    // plain text header with the tighter spacing and no card backing.
+    val hasCover = colors.isMidnightEmerald
+
     Box(modifier = Modifier.fillMaxWidth()) {
-        // Cover bleeds behind the status bar and edge-fades out before the day list.
-        Image(
-            painter = painterResource(config.coverRes),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(320.dp)
-                .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                .drawWithContent {
-                    drawContent()
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            0.0f to Color.Black.copy(alpha = 0.92f),
-                            0.18f to Color.Black,
-                            0.62f to Color.Black,
-                            1.0f to Color.Transparent
-                        ),
-                        blendMode = BlendMode.DstIn
-                    )
-                }
-        )
+        if (hasCover) {
+            // Cover bleeds behind the status bar and edge-fades out before the day list.
+            CoverHeaderBand(art = config.coverRes, height = 320.dp)
+        }
 
         val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
         CompositionLocalProvider(LocalLayoutDirection provides direction) {
@@ -184,7 +167,7 @@ private fun JourneyHeader(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.3f))
+                        .background(if (hasCover) Color.Black.copy(alpha = 0.3f) else Color.Transparent)
                         .border(1.dp, colors.strokeColor, CircleShape)
                         .pressable(onClick = onBack),
                     contentAlignment = Alignment.Center
@@ -226,13 +209,16 @@ private fun JourneyHeader(
                     EmIconChip(icon = config.icon, size = 56.dp)
                 }
 
-                // Deep-emerald backing keeps the card text legible over the art.
+                // Over art: wider heading gap + deep-emerald backing keeps the
+                // card text legible. Plain header: tighter 18dp, no backing.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 30.dp)
+                        .padding(top = if (hasCover) 30.dp else 18.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFF06120E).copy(alpha = 0.45f))
+                        .background(
+                            if (hasCover) Color(0xFF06120E).copy(alpha = 0.45f) else Color.Transparent
+                        )
                 ) {
                     EmCard(modifier = Modifier.fillMaxWidth(), glow = true) {
                         Column(

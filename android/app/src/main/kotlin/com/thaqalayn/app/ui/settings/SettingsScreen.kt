@@ -384,7 +384,7 @@ fun SettingsScreen(navController: NavHostController) {
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(colors.accentGradient)
-                                        .pressable { navController.navigate(Routes.PAYWALL) }
+                                        .pressable { navController.navigate(Routes.paywall()) }
                                         .padding(vertical = 12.dp),
                                     horizontalArrangement = Arrangement.Center
                                 ) {

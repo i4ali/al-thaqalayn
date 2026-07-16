@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.data.FastingVersesManager
@@ -45,7 +46,10 @@ import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmIconChip
+import com.thaqalayn.app.R
+import com.thaqalayn.app.ui.components.CoverHeaderBand
 import com.thaqalayn.app.ui.components.ThemedBackground
+import com.thaqalayn.app.ui.components.fullBleed
 import com.thaqalayn.app.ui.components.pressable
 import com.thaqalayn.app.ui.theme.CormorantFamily
 import com.thaqalayn.app.ui.theme.Theme
@@ -87,16 +91,14 @@ fun FastingVersesScreen(navController: NavHostController) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-        ) {
-            // Back
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Back - floats above the scrolling header band.
             Box(
                 modifier = Modifier
+                    .statusBarsPadding()
                     .padding(horizontal = 20.dp)
                     .padding(top = 12.dp)
+                    .zIndex(1f)
                     .size(40.dp)
                     .clip(CircleShape)
                     .border(1.dp, colors.strokeColor, CircleShape)
@@ -115,13 +117,22 @@ fun FastingVersesScreen(navController: NavHostController) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 40.dp)
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 40.dp)
                 ) {
                     item {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(7.dp),
-                            modifier = Modifier.padding(bottom = 2.dp)
-                        ) {
+                        // Midnight Emerald only: night-shrine band behind the
+                        // header, bleeding behind the status bar (decorative).
+                        Box(modifier = Modifier.fullBleed(horizontal = 20.dp)) {
+                            if (colors.isMidnightEmerald) {
+                                CoverHeaderBand(art = R.drawable.explore_cover_fasting, height = 280.dp)
+                            }
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(7.dp),
+                                modifier = Modifier
+                                    .statusBarsPadding()
+                                    .padding(horizontal = 20.dp)
+                                    .padding(top = 68.dp, bottom = 2.dp)
+                            ) {
                             Text(
                                 text = eyebrow(lang).uppercase(),
                                 fontSize = 11.sp,
@@ -142,6 +153,7 @@ fun FastingVersesScreen(navController: NavHostController) {
                                 fontSize = 13.5.sp,
                                 color = colors.secondaryText
                             )
+                            }
                         }
                     }
 
