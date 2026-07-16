@@ -1,5 +1,6 @@
 package com.thaqalayn.app.audio
 
+import android.app.PendingIntent
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 
@@ -14,7 +15,13 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         AudioManager.exoPlayer?.let { player ->
-            mediaSession = MediaSession.Builder(this, player).build()
+            val builder = MediaSession.Builder(this, player)
+            packageManager.getLaunchIntentForPackage(packageName)?.let { launch ->
+                builder.setSessionActivity(
+                    PendingIntent.getActivity(this, 0, launch, PendingIntent.FLAG_IMMUTABLE)
+                )
+            }
+            mediaSession = builder.build()
         }
     }
 

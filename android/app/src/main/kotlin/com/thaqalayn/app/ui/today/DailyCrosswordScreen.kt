@@ -37,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.data.DailyCrosswordManager
@@ -306,19 +308,25 @@ fun DailyCrosswordScreen(navController: NavHostController) {
                     }
                 }
 
-                Spacer(modifier = Modifier.weight(0.5f))
-
-                // Grid
+                // Grid — takes all flexible space; cell size is bounded by BOTH width and
+                // height so the clue bar and keyboard below never get pushed off-screen
+                // on wide/short displays (tablets, landscape).
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .weight(1f)
                         .padding(horizontal = 20.dp)
                 ) {
                     val spacing = 6.dp
-                    val cell = (maxWidth - spacing * (puzzle.cols - 1)) / puzzle.cols
+                    val cell = min(
+                        (maxWidth - spacing * (puzzle.cols - 1)) / puzzle.cols,
+                        (maxHeight - spacing * (puzzle.rows - 1)) / puzzle.rows
+                    )
                     Column(
                         verticalArrangement = Arrangement.spacedBy(spacing),
-                        modifier = Modifier.align(Alignment.Center)
+                        // -1/3 vertical bias keeps the grid slightly above center,
+                        // matching the previous 0.5 : 1 spacer split.
+                        modifier = Modifier.align(BiasAlignment(0f, -0.33f))
                     ) {
                         for (r in 0 until puzzle.rows) {
                             Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
@@ -381,8 +389,6 @@ fun DailyCrosswordScreen(navController: NavHostController) {
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
 
                 // Clue bar
                 Row(
@@ -485,7 +491,9 @@ private fun CrosswordKeyboard(onLetter: (Char) -> Unit, onBackspace: () -> Unit)
     ) {
         val keySpacing = 5.dp
         val keyW = (maxWidth - keySpacing * 9 - 8.dp) / 10
-        val keyH = keyW * 1.35f
+        // Cap key height like iOS (min(46, keyW * 1.35)) so the keyboard stays
+        // compact on wide displays instead of growing with screen width.
+        val keyH = min(keyW * 1.35f, 46.dp)
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             KB_ROWS.forEachIndexed { idx, row ->

@@ -1,5 +1,6 @@
 package com.thaqalayn.app.audio
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.getValue
@@ -10,6 +11,9 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
 import com.thaqalayn.app.model.AudioPlayerState
 import com.thaqalayn.app.model.CurrentPlayback
 import com.thaqalayn.app.model.Reciter
@@ -32,6 +36,8 @@ object AudioManager {
 
     private var player: ExoPlayer? = null
     private lateinit var prefs: SharedPreferences
+    private var appContext: Context? = null
+    private var controllerFuture: ListenableFuture<MediaController>? = null
 
     /** Shared player instance for the media session service. */
     val exoPlayer: ExoPlayer? get() = player
@@ -48,6 +54,7 @@ object AudioManager {
     private var queuedVerseNumbers: List<Int> = emptyList()
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         prefs = context.getSharedPreferences("thaqalayn_audio", Context.MODE_PRIVATE)
         selectedReciter = Reciter.byId(prefs.getString(RECITER_KEY, null))
 
@@ -96,6 +103,26 @@ object AudioManager {
         prefs.edit().putString(RECITER_KEY, reciter.id).apply()
     }
 
+    /**
+     * Connect a MediaController to PlaybackService's session. Binding through the
+     * session token starts the service, which wraps the shared ExoPlayer in a
+     * MediaSession and manages the media notification + foreground-service
+     * lifecycle while recitation plays in the background.
+     */
+    private fun ensureSessionStarted() {
+        val ctx = appContext ?: return
+        controllerFuture?.let { existing ->
+            if (!existing.isDone) return
+            val connected = runCatching { existing.get().isConnected }.getOrDefault(false)
+            if (connected) return
+            // Service was killed since the last session; release and reconnect.
+            MediaController.releaseFuture(existing)
+            controllerFuture = null
+        }
+        val token = SessionToken(ctx, ComponentName(ctx, PlaybackService::class.java))
+        controllerFuture = MediaController.Builder(ctx, token).buildAsync()
+    }
+
     private fun refreshPlayback() {
         val exo = player ?: return
         val surah = currentSurah ?: return
@@ -130,6 +157,7 @@ object AudioManager {
             togglePlayPause()
             return
         }
+        ensureSessionStarted()
         currentSurah = surah
         queuedVerseNumbers = listOf(verse.number)
         exo.setMediaItem(mediaItem(surah, verse.number))
@@ -143,6 +171,7 @@ object AudioManager {
     fun playVerseSequence(verses: List<VerseWithTafsir>, surah: Surah, startingFrom: Int = 0) {
         val exo = player ?: return
         if (verses.isEmpty()) return
+        ensureSessionStarted()
         currentSurah = surah
         val remaining = verses.drop(startingFrom.coerceIn(0, verses.size - 1))
         queuedVerseNumbers = remaining.map { it.number }
