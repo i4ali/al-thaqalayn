@@ -288,6 +288,62 @@ footer{border-top:1px solid var(--line);margin-top:70px;padding:28px 0 60px;font
   <div class="naming"><b>On naming:</b> screens below say "Commitment", which explains itself. The rooted alternative is <i>ahd</i> <span class="ar">عَهْد</span>, a pledge or covenant - "My Ahd" - since what the user makes here is precisely a promise kept day by day. The forty-day count itself is the <i>arba'in</i> <span class="ar">أَرْبَعِين</span> of the tradition.</div>
 </div></header>
 
+<!-- ================= 00 · WHERE IT BEGINS ================= -->
+<section class="flow"><div class="wrap" style="display:contents">
+  <div class="phone-col">
+    <figure class="phone"><div class="screen">
+      <div class="em-bgfx"></div>
+      <div class="statusbar"><span>9:41</span><span class="sb-right"><svg viewBox="0 0 18 12" width="17"><use href="#i-signal"/></svg><svg viewBox="0 0 16 12" width="15"><use href="#i-wifi"/></svg><svg viewBox="0 0 27 12" width="25"><use href="#i-battery"/></svg></span></div>
+      <div class="pcontent crop" style="padding-bottom:0">
+        <div class="p-toprow"><div class="avatar">A</div><div class="bell"><svg><use href="#i-bell"/></svg></div></div>
+        <div style="margin-top:14px"><span class="em-pill">10 Muharram 1448 AH</span></div>
+        <div class="greet" style="margin-top:16px">Assalamu alaykum, Ali <svg><use href="#i-moonstars"/></svg></div>
+        <div class="ptitle" style="margin-top:6px">Today</div>
+
+        <!-- seasonal invitation -->
+        <div class="em-card glow" style="margin-top:16px;padding:18px 18px 16px;position:relative;overflow:hidden">
+          <div style="position:absolute;width:130px;height:130px;border-radius:50%;background:rgba(214,178,94,.07);top:-40px;right:-34px"></div>
+          <div class="em-eyebrow t2" style="display:flex;align-items:center;gap:6px;font-size:10px"><svg style="width:12px;height:12px"><use href="#i-sparkle"/></svg> The season of the forty</div>
+          <div class="em-serif" style="font-size:23px;line-height:1.2;margin-top:9px">Ziyarat Ashura, every day until Arbaeen</div>
+          <div class="em-cap" style="margin-top:6px">Forty days, from Ashura to Arbaeen · 10 Muharram – 20 Safar</div>
+          <div class="gold-cta" style="margin-top:14px;padding:13px;font-size:14px">Begin the commitment</div>
+        </div>
+
+        <!-- empty state -->
+        <div class="sec-label" style="margin-top:18px"><svg><use href="#i-cal"/></svg> Your commitments</div>
+        <div class="em-card" style="padding:16px;text-align:center">
+          <div class="em-cap" style="font-size:12px;line-height:1.5">Nothing here yet. A commitment is a promise to recite something daily, kept on a calendar.</div>
+          <div class="add-row" style="margin-top:12px"><svg><use href="#i-plus"/></svg> New commitment · any dua, verse, or surah</div>
+        </div>
+
+        <div style="height:110px"></div>
+      </div>
+    </div></figure>
+    <figcaption class="phone-cap">Today tab, before any commitment exists · the invitation and the blank slate</figcaption>
+  </div>
+  <div class="notes">
+    <div class="kicker">00 · Where it begins</div>
+    <h2>Three doors into the same create screen</h2>
+    <ul class="ann">
+      <li><b>On Today, in season, the invitation leads.</b> Through Muharram the Today tab carries this card near the top; one tap opens the create screen of section 02 with Ziyarat Ashura and 40 days already filled in, so the first commitment is two taps from the home screen. Out of season the slot generalizes to "Make a commitment" with a few suggestions.</li>
+      <li><b>The empty state teaches the feature.</b> Before anything exists, "Your commitments" is one sentence about what a commitment is plus a dashed New commitment row - the blank slate is the tutorial. Once the first commitment is made, this section becomes the cards of section 03, and the row moves to the Commitments screen behind "See all", which keeps a permanent "+ New commitment" at the top.</li>
+      <li><b>Every dua and ziyarat detail view gains a Commit chip</b> beside Listen and Read, in the same capsule family - the moment of reading something is the moment of promising it. It opens the same create screen, pre-filled with the item in hand:</li>
+    </ul>
+    <div style="background:var(--em-bg);border-radius:18px;padding:15px 16px 17px;margin-top:14px;max-width:340px;border:1px solid var(--line)">
+      <div class="em-eyebrow t2" style="font-size:9px">Ziyarat · Detail view</div>
+      <div class="em-serif" style="font-size:19px;margin-top:5px">Ziyarat Ashura</div>
+      <div style="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap">
+        <span class="act-chip"><svg><use href="#i-speaker"/></svg> Listen</span>
+        <span class="act-chip"><svg><use href="#i-book"/></svg> Read</span>
+        <span class="act-chip on"><svg><use href="#i-cal"/></svg> Commit · 40 days</span>
+      </div>
+    </div>
+    <ul class="ann" style="margin-top:14px">
+      <li><b>All three doors land on the one create screen</b> of section 02; the only difference is what arrives pre-filled.</li>
+    </ul>
+  </div>
+</div></section>
+
 <!-- ================= 01 · THE TRACKER ================= -->
 <section class="flow"><div class="wrap" style="display:contents">
   <div class="phone-col">
@@ -424,7 +480,7 @@ footer{border-top:1px solid var(--line);margin-top:70px;padding:28px 0 60px;font
       <li><b>How long:</b> preset chips, with <b>40 days</b> first and the caption naming why - and because the span is known, the end date is announced before you begin. "Until a date" covers "every day until Arbaeen" style pledges; "Ongoing" covers nightly Ayat al-Kursi.</li>
       <li><b>The rule is an explicit, honest choice:</b> Consecutive restarts the count on a miss, matching the tradition of the forty; Flexible extends the end instead. Choosing it up front means the app never has to guess how strict to be on the user's behalf.</li>
       <li><b>Reminder</b> hooks the existing notification infrastructure; a 9 PM nudge is most of what keeps a forty alive.</li>
-      <li><b>Entry points:</b> a "+ New commitment" row on the commitments screen, and a "Commit to this" action on ziyarat/dua detail views - same capsule family as Listen.</li>
+      <li><b>Entry points:</b> the three doors of section 00 - the Today invitation, the empty-state row, and the Commit chip on detail views - all open this screen with different pre-fills.</li>
     </ul>
   </div>
 </div></section>
