@@ -210,9 +210,21 @@ section.flow:first-of-type{border-top:none}
 .add-row{display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed var(--em-stroke-strong);border-radius:16px;padding:12px;font:600 12.5px/1 var(--sans);color:var(--em-gold)}
 .add-row svg{width:12px;height:12px}
 
+/* horizontal shelf (JourneyShelf / ShelfCard pattern) */
+.shelf{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:10px -20px 0;padding:2px 20px 6px;scroll-snap-type:x proximity}
+.shelf::-webkit-scrollbar{display:none}
+.sh-card{flex:none;width:140px;border-radius:18px;background:var(--em-glass);border:1px solid var(--em-stroke);padding:12px;scroll-snap-align:start;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.sh-card.live{background:var(--em-glass-hi);border-color:rgba(214,178,94,.40)}
+.sh-card.dash{border:1.5px dashed var(--em-stroke-strong);background:transparent;box-shadow:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;color:var(--em-gold)}
+.sh-card.dash svg{width:15px;height:15px}
+.sh-all{display:inline-flex;align-items:center;gap:3px;font:500 11.5px/1 var(--sans);color:var(--em-text-2)}
+.sh-all svg{width:9px;height:9px}
+
 /* today-card check */
 .tc-check{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--em-stroke-strong);flex:none;display:grid;place-items:center;color:transparent;cursor:pointer;transition:all .25s}
 .tc-check svg{width:14px;height:14px}
+.tc-check.sm{width:28px;height:28px}
+.tc-check.sm svg{width:12px;height:12px}
 .tc-check:active{transform:scale(.88)}
 .tc.done .tc-check{background:var(--em-green);border-color:transparent;color:#fff}
 .tc .caps-undone{display:block}
@@ -300,33 +312,47 @@ footer{border-top:1px solid var(--line);margin-top:70px;padding:28px 0 60px;font
         <div class="greet" style="margin-top:16px">Assalamu alaykum, Ali <svg><use href="#i-moonstars"/></svg></div>
         <div class="ptitle" style="margin-top:6px">Today</div>
 
-        <!-- seasonal invitation -->
-        <div class="em-card glow" style="margin-top:16px;padding:18px 18px 16px;position:relative;overflow:hidden">
-          <div style="position:absolute;width:130px;height:130px;border-radius:50%;background:rgba(214,178,94,.07);top:-40px;right:-34px"></div>
-          <div class="em-eyebrow t2" style="display:flex;align-items:center;gap:6px;font-size:10px"><svg style="width:12px;height:12px"><use href="#i-sparkle"/></svg> The season of the forty</div>
-          <div class="em-serif" style="font-size:23px;line-height:1.2;margin-top:9px">Ziyarat Ashura, every day until Arbaeen</div>
-          <div class="em-cap" style="margin-top:6px">Forty days, from Ashura to Arbaeen · 10 Muharram – 20 Safar</div>
-          <div class="gold-cta" style="margin-top:14px;padding:13px;font-size:14px">Begin the commitment</div>
+        <!-- commitments shelf · empty state -->
+        <div class="sec-label" style="margin-top:16px;margin-bottom:0"><svg><use href="#i-cal"/></svg> Your commitments</div>
+        <div class="em-cap" style="margin-top:7px;padding-left:2px">A commitment is a promise to recite something daily, kept on a calendar.</div>
+        <div class="shelf">
+          <div class="sh-card live">
+            <div class="em-chip-ic on" style="width:38px;height:38px;border-radius:12px"><svg style="width:16px;height:16px"><use href="#i-sparkle"/></svg></div>
+            <div class="gold-caps" style="font-size:9px;letter-spacing:1.3px;margin-top:10px">The season · 40 days</div>
+            <div class="em-serif" style="font-size:17.5px;line-height:1.2;margin-top:3px">Ziyarat Ashura</div>
+            <div class="em-cap" style="margin-top:4px">Ashura to Arbaeen</div>
+            <div class="gold-caps" style="margin-top:10px;font-size:10px">Begin ›</div>
+          </div>
+          <div class="sh-card dash">
+            <svg><use href="#i-plus"/></svg>
+            <div style="font:600 12.5px/1.3 var(--sans)">New commitment</div>
+            <div class="em-cap">any dua, verse,<br>or surah</div>
+          </div>
+          <div class="sh-card">
+            <div class="em-chip-ic" style="width:38px;height:38px;border-radius:12px"><svg style="width:16px;height:16px"><use href="#i-book"/></svg></div>
+            <div class="em-eyebrow t2" style="font-size:9px;margin-top:10px">Suggestion</div>
+            <div class="em-serif" style="font-size:17.5px;line-height:1.2;margin-top:3px">Ayat al-Kursi</div>
+            <div class="em-cap" style="margin-top:4px">Nightly, ongoing</div>
+          </div>
         </div>
 
-        <!-- empty state -->
-        <div class="sec-label" style="margin-top:18px"><svg><use href="#i-cal"/></svg> Your commitments</div>
-        <div class="em-card" style="padding:16px;text-align:center">
-          <div class="em-cap" style="font-size:12px;line-height:1.5">Nothing here yet. A commitment is a promise to recite something daily, kept on a calendar.</div>
-          <div class="add-row" style="margin-top:12px"><svg><use href="#i-plus"/></svg> New commitment · any dua, verse, or surah</div>
+        <!-- the rest of Today continues beneath, unchanged -->
+        <div style="margin-top:10px;position:relative;background:linear-gradient(135deg,#ECD49A,#B8923F);border-radius:22px;padding:20px;color:var(--em-on-gold);box-shadow:0 12px 24px rgba(214,178,94,.3);overflow:hidden">
+          <div style="position:absolute;width:110px;height:110px;border-radius:50%;background:rgba(26,20,8,.08);top:-30px;right:-24px"></div>
+          <div style="display:flex;align-items:center;gap:6px;font:700 11px/1 var(--sans);letter-spacing:1.3px;color:rgba(26,20,8,.75)"><svg width="13" height="13"><use href="#i-sparkle"/></svg> DAILY REMINDER</div>
+          <div class="em-serif" style="font-size:22px;color:var(--em-on-gold);margin-top:8px;line-height:1.25">Indeed, in the remembrance of Allah do hearts find rest.</div>
         </div>
-
         <div style="height:110px"></div>
       </div>
     </div></figure>
-    <figcaption class="phone-cap">Today tab, before any commitment exists · the invitation and the blank slate</figcaption>
+    <figcaption class="phone-cap">Today tab, before any commitment exists · the invitation lives on the shelf</figcaption>
   </div>
   <div class="notes">
     <div class="kicker">00 · Where it begins</div>
     <h2>Three doors into the same create screen</h2>
     <ul class="ann">
-      <li><b>On Today, in season, the invitation leads.</b> Through Muharram the Today tab carries this card near the top; one tap opens the create screen of section 02 with Ziyarat Ashura and 40 days already filled in, so the first commitment is two taps from the home screen. Out of season the slot generalizes to "Make a commitment" with a few suggestions.</li>
-      <li><b>The empty state teaches the feature.</b> Before anything exists, "Your commitments" is one sentence about what a commitment is plus a dashed New commitment row - the blank slate is the tutorial. Once the first commitment is made, this section becomes the cards of section 03, and the row moves to the Commitments screen behind "See all", which keeps a permanent "+ New commitment" at the top.</li>
+      <li><b>The shelf is the front door, and it scrolls sideways.</b> Even before anything exists, "Your commitments" is a horizontal shelf, not a stack - the feature never costs Today more than one row. In season the first card is the gold invitation: Ziyarat Ashura, forty days, Begin. One tap opens the create screen of section 02 already filled in, so the first commitment is two taps from the home screen.</li>
+      <li><b>The empty state teaches in one sentence,</b> set above the shelf rather than inside a card. The dashed New commitment card rides the shelf from day zero, and suggestion cards (nightly Ayat al-Kursi, peeking at the right edge) fill the row out of season. Once commitments exist, these give way to the live cards of section 03; "All N ›" then leads to the Commitments screen.</li>
       <li><b>Every dua and ziyarat detail view gains a Commit chip</b> beside Listen and Read, in the same capsule family - the moment of reading something is the moment of promising it. It opens the same create screen, pre-filled with the item in hand:</li>
     </ul>
     <div style="background:var(--em-bg);border-radius:18px;padding:15px 16px 17px;margin-top:14px;max-width:340px;border:1px solid var(--line)">
@@ -499,56 +525,83 @@ footer{border-top:1px solid var(--line);margin-top:70px;padding:28px 0 60px;font
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
           <div class="sec-label" style="margin:0"><svg><use href="#i-cal"/></svg> Your commitments</div>
-          <span class="gold-caps" style="font-size:10px;letter-spacing:1.2px">See all</span>
+          <span class="sh-all">All 2 <svg><use href="#i-chev-r"/></svg></span>
         </div>
 
-        <!-- commitment card 1 (interactive) -->
-        <div class="em-card glow tc" id="tc1" style="margin-top:10px;padding:15px 16px">
-          <div style="display:flex;align-items:center;gap:13px">
-            <div class="em-chip-ic"><svg><use href="#i-dome"/></svg></div>
-            <div style="flex:1;min-width:0">
-              <div class="em-serif" style="font-size:20px;line-height:1.15">Ziyarat Ashura</div>
-              <div class="caps-undone gold-caps" style="margin-top:4px">Day 34 of 40 · Not yet</div>
-              <div class="caps-done green-caps" style="margin-top:4px">Done · Day 34 of 40</div>
+        <!-- commitments shelf -->
+        <div class="shelf">
+          <div class="sh-card live tc" id="tc1">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div class="em-chip-ic" style="width:38px;height:38px;border-radius:12px"><svg style="width:16px;height:16px"><use href="#i-dome"/></svg></div>
+              <div class="tc-check sm" role="button" tabindex="0" aria-label="Mark recited today" aria-pressed="false"><svg><use href="#i-check"/></svg></div>
             </div>
-            <div class="tc-check" role="button" tabindex="0" aria-label="Mark recited today" aria-pressed="false"><svg><use href="#i-check"/></svg></div>
+            <div class="caps-undone gold-caps" style="font-size:9px;letter-spacing:1.2px;margin-top:10px">Day 34 of 40</div>
+            <div class="caps-done green-caps" style="font-size:9px;letter-spacing:1.2px;margin-top:10px">Done today</div>
+            <div class="em-serif" style="font-size:17.5px;line-height:1.2;margin-top:3px">Ziyarat Ashura</div>
+            <div class="mini-bar" style="margin-top:10px"><i id="tc1-bar" style="width:82.5%"></i></div>
           </div>
-          <div class="mini-bar"><i id="tc1-bar" style="width:82.5%"></i></div>
-        </div>
-
-        <!-- commitment card 2 -->
-        <div class="em-card tc" style="margin-top:10px;padding:15px 16px">
-          <div style="display:flex;align-items:center;gap:13px">
-            <div class="em-chip-ic"><svg><use href="#i-book"/></svg></div>
-            <div style="flex:1;min-width:0">
-              <div class="em-serif" style="font-size:20px;line-height:1.15">Ayat al-Kursi</div>
-              <div class="gold-caps" style="margin-top:4px">Nightly · 🔥 12</div>
+          <div class="sh-card tc">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div class="em-chip-ic" style="width:38px;height:38px;border-radius:12px"><svg style="width:16px;height:16px"><use href="#i-book"/></svg></div>
+              <div class="tc-check sm" role="button" tabindex="0" aria-label="Mark recited today" aria-pressed="false"><svg><use href="#i-check"/></svg></div>
             </div>
-            <div class="tc-check" role="button" tabindex="0" aria-label="Mark recited today" aria-pressed="false"><svg><use href="#i-check"/></svg></div>
+            <div class="caps-undone gold-caps" style="font-size:9px;letter-spacing:1.2px;margin-top:10px">Nightly · 🔥 12</div>
+            <div class="caps-done green-caps" style="font-size:9px;letter-spacing:1.2px;margin-top:10px">Done · 🔥 13</div>
+            <div class="em-serif" style="font-size:17.5px;line-height:1.2;margin-top:3px">Ayat al-Kursi</div>
+          </div>
+          <div class="sh-card dash">
+            <svg><use href="#i-plus"/></svg>
+            <div style="font:600 12.5px/1.3 var(--sans)">New</div>
           </div>
         </div>
 
-        <!-- existing gold hero, cropped -->
-        <div style="margin-top:14px;position:relative;background:linear-gradient(135deg,#ECD49A,#B8923F);border-radius:22px;padding:20px;color:var(--em-on-gold);box-shadow:0 12px 24px rgba(214,178,94,.3);overflow:hidden">
+        <!-- existing gold hero -->
+        <div style="margin-top:10px;position:relative;background:linear-gradient(135deg,#ECD49A,#B8923F);border-radius:22px;padding:20px;color:var(--em-on-gold);box-shadow:0 12px 24px rgba(214,178,94,.3);overflow:hidden">
           <div style="position:absolute;width:110px;height:110px;border-radius:50%;background:rgba(26,20,8,.08);top:-30px;right:-24px"></div>
           <div style="display:flex;align-items:center;gap:6px;font:700 11px/1 var(--sans);letter-spacing:1.3px;color:rgba(26,20,8,.75)"><svg width="13" height="13"><use href="#i-sparkle"/></svg> DAILY REMINDER</div>
-          <div class="em-serif" style="font-size:24px;color:var(--em-on-gold);margin-top:8px;line-height:1.25">So remember Me; I will remember you.</div>
+          <div class="em-serif" style="font-size:22px;color:var(--em-on-gold);margin-top:8px;line-height:1.25">So remember Me; I will remember you.</div>
         </div>
-        <div style="height:110px"></div>
+
+        <!-- daily practice shelf (proposed regrouping), cropping into the fade -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+          <div class="sec-label" style="margin:0"><svg><use href="#i-flame"/></svg> Daily practice</div>
+          <span class="sh-all">All 4 <svg><use href="#i-chev-r"/></svg></span>
+        </div>
+        <div class="shelf">
+          <div class="sh-card live">
+            <div class="em-chip-ic" style="width:38px;height:38px;border-radius:12px"><svg style="width:16px;height:16px"><use href="#i-quote"/></svg></div>
+            <div class="gold-caps" style="font-size:9px;letter-spacing:1.2px;margin-top:10px">Streak · 🔥 5</div>
+            <div class="em-serif" style="font-size:17.5px;line-height:1.2;margin-top:3px">Daily Challenge</div>
+          </div>
+          <div class="sh-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div class="em-chip-ic" style="width:38px;height:38px;border-radius:12px"><svg style="width:16px;height:16px"><use href="#i-tap"/></svg></div>
+              <span class="prem">Premium</span>
+            </div>
+            <div class="em-eyebrow t2" style="font-size:9px;margin-top:10px">New puzzle</div>
+            <div class="em-serif" style="font-size:17.5px;line-height:1.2;margin-top:3px">Crossword</div>
+          </div>
+          <div class="sh-card">
+            <div class="em-chip-ic" style="width:38px;height:38px;border-radius:12px"><svg style="width:16px;height:16px"><use href="#i-beads"/></svg></div>
+            <div class="em-eyebrow t2" style="font-size:9px;margin-top:10px">Today</div>
+            <div class="em-serif" style="font-size:17.5px;line-height:1.2;margin-top:3px">Dua of the Day</div>
+          </div>
+        </div>
+        <div style="height:60px"></div>
       </div>
     </div></figure>
-    <figcaption class="phone-cap">Today tab · mark it done without leaving the home screen</figcaption>
+    <figcaption class="phone-cap">Today tab · commitments as a horizontal shelf, one row no matter how many</figcaption>
   </div>
   <div class="notes">
     <div class="kicker">03 · Day to day</div>
-    <h2>The commitment meets you on Today</h2>
-    <div class="try"><svg viewBox="0 0 24 24"><use href="#i-tap"/></svg> Tap the check circle on the Ziyarat card</div>
+    <h2>A shelf, not a stack</h2>
+    <div class="try"><svg viewBox="0 0 24 24"><use href="#i-tap"/></svg> Drag the shelf sideways · tap the check on Ziyarat Ashura</div>
     <ul class="ann">
-      <li><b>One card per active commitment,</b> right under the greeting. The check circle marks the day done in place - same single tap as the calendar, no navigation. The sub-line flips to the green "DONE FOR TODAY" state the crossword card already taught users.</li>
-      <li><b>Tapping the card body</b> (not the circle) opens the tracker from section 01.</li>
-      <li><b>"See all" leads to a Commitments screen:</b> active ones with their bead strips, completed ones archived below with their final calendars - a quiet trophy room.</li>
-      <li><b>The count line adapts to the shape:</b> a forty shows "Day 34 of 40"; an ongoing commitment shows the 🔥 streak instead, reusing the challenge streak pattern.</li>
-      <li><b>Missed-day nudge:</b> if yesterday went unmarked on a consecutive commitment, this card asks first - "Did you recite yesterday?" - offering back-fill before the strict rule resets anything. Honest, but never silently punishing.</li>
+      <li><b>Today already stacks seven full-width cards</b> - What's New, the Daily Reminder hero, Continue Reading, Bookmark Spotlight, Daily Challenge, Crossword, Dua of the Day - so commitments must not join the pile. They arrive as one horizontal shelf: the exact JourneyShelf / ShelfCard pattern from the Journey hub, with the eyebrow label, "All N ›", compact fixed-width cards, and the gold hairline on live ones.</li>
+      <li><b>The height cost is constant.</b> One commitment or six, the shelf spends one row of the screen; more commitments grow to the right, never downward. The trailing dashed card keeps creation one swipe away.</li>
+      <li><b>The check circle survives the shrink:</b> each compact card still marks its day done in place and flips to the green done state the crossword card taught. Tapping the card body (not the circle) opens the tracker of section 01; "All N ›" opens the Commitments screen with actives and the archive.</li>
+      <li><b>The eyebrow adapts to the shape:</b> a forty reads "Day 34 of 40" with its progress bar; an ongoing commitment reads "Nightly · 🔥 12", reusing the challenge streak pattern. A missed day on a consecutive commitment turns the eyebrow into the back-fill ask before the strict rule resets anything.</li>
+      <li><b>The same cure fits the rest of the tab:</b> Daily Challenge, Crossword, and Dua of the Day collapse into a second "Daily practice" shelf, sketched at the bottom of the phone. Today then reads greeting → commitments shelf → the two gold heroes and Continue Reading → practice shelf: two rows of shelves instead of five stacked cards, and every future daily feature has a home that costs no height.</li>
     </ul>
   </div>
 </div></section>
@@ -636,7 +689,7 @@ footer{border-top:1px solid var(--line);margin-top:70px;padding:28px 0 60px;font
       <h3>Ziyarat Ashura ships with it</h3>
       <ul>
         <li>New content: Ziyarat Ashura full text, translation, transliteration - with a <b>Listen</b> option via the existing <code>DuaListenButton</code>/TTS path, per the house rule.</li>
-        <li>Surfaces: Today-tab commitment cards, the tracker screen, the create screen, the Commitments list; "Commit to this" chips on dua/ziyarat detail views.</li>
+        <li>Surfaces: the Today-tab commitment shelf - a near-verbatim reuse of <code>JourneyShelf</code>/<code>ShelfCard</code> (fixed-width cards, uniform height via <code>ShelfCardHeightKey</code>, gold hairline when live) with a check circle added - plus the tracker, create screen, Commitments list, and "Commit to this" chips on dua/ziyarat detail views.</li>
         <li>Reminders through the existing notification pipeline, deep-linking into the tracker.</li>
       </ul>
     </div>
