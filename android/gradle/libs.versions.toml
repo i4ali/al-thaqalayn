@@ -9,7 +9,7 @@ navigationCompose = "2.9.0"
 kotlinxSerialization = "1.8.1"
 datastore = "1.1.6"
 media3 = "1.6.1"
-billing = "7.1.1"
+billing = "9.1.0"
 splashscreen = "1.0.1"
 work = "2.10.1"
 
@@ -31,7 +31,9 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
-billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
+# Base artifact, NOT billing-ktx: the 9.x -ktx variant ships Kotlin 2.3 metadata,
+# which this project's Kotlin 2.1.20 toolchain can't read. No coroutine extensions are used.
+billing = { group = "com.android.billingclient", name = "billing", version.ref = "billing" }
 androidx-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 

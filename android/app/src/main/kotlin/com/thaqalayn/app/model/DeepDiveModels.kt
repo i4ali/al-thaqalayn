@@ -145,6 +145,135 @@ sealed class DeepDiveSection {
         val line: LocalizedText
     ) : DeepDiveSection()
 
+    /**
+     * The recurring question of al-Rahman: the refrain verse glows, and the
+     * reader answers it in the words the Ahl al-Bayt taught - the reply rising
+     * as an ascending thread of light, the deliberate inverse of [Response]'s
+     * descending one (there He answers you; here He asks and you answer).
+     * [teachSource] is non-null on the first occurrence only, where the reply is
+     * being taught; [replyArabic] is a taught devotional phrase, not Qur'an.
+     */
+    data class Refrain(
+        val act: Int,
+        val tag: LocalizedText,
+        val surah: Int,
+        val ayah: Int,
+        val arabic: String,
+        val translation: LocalizedText,
+        val reference: String,
+        val intro: LocalizedText,
+        val teachSource: LocalizedText?,
+        val replyArabic: String,
+        val replyTransliteration: String,
+        val replyTranslation: LocalizedText,
+        val reflection: LocalizedText
+    ) : DeepDiveSection()
+
+    /**
+     * The interactive close of a dive built on entrustment (Tawakkul): the reader
+     * names what they are gripping - in their heart - presses and holds the ring
+     * (that is the grip), and the lifting of the finger IS the release, resolving
+     * into the entrusting verse. Replaces [ReflectionPrompt] for such dives.
+     */
+    data class Release(
+        val tag: LocalizedText,
+        val prompt: LocalizedText,
+        val subline: LocalizedText,
+        val arabic: String,
+        val translation: LocalizedText,
+        val reference: String,
+        val note: LocalizedText,
+        val nextLabel: LocalizedText
+    ) : DeepDiveSection()
+
+    /**
+     * The interactive close of a dive built on gratitude (Shukr): the reader taps
+     * to count blessings - each tap births a point of light - until the lights
+     * begin multiplying on their own, outrunning the finger, and the screen
+     * resolves into the verse: the count cannot be finished.
+     */
+    data class Count(
+        val tag: LocalizedText,
+        val prompt: LocalizedText,
+        val subline: LocalizedText,
+        val arabic: String,
+        val translation: LocalizedText,
+        val reference: String,
+        val note: LocalizedText,
+        val nextLabel: LocalizedText
+    ) : DeepDiveSection()
+
+    /**
+     * The interactive close of a dive built on prayer and nearness (Salah): the
+     * reader presses and holds - the held stillness IS the prostration: a point of
+     * light sinks to the earth-line while the screen draws close, and the verse
+     * resolves while still held. Lifting afterward is the rising from sujud.
+     */
+    data class Sujud(
+        val tag: LocalizedText,
+        val prompt: LocalizedText,
+        val subline: LocalizedText,
+        val arabic: String,
+        val translation: LocalizedText,
+        val reference: String,
+        val note: LocalizedText,
+        val nextLabel: LocalizedText
+    ) : DeepDiveSection()
+
+    /**
+     * The interactive close of a dive built on sincerity (Ikhlas): a fixed scatter
+     * of small lights - the audiences the reader has performed for. Tapping a light
+     * puts it out; the last light cannot be put out - tapping it only makes it
+     * flare - and the screen resolves into the verse: everything perishes except
+     * His Face. Subtraction to the one unremovable Watcher, the inverse of [Count].
+     */
+    data class Extinguish(
+        val tag: LocalizedText,
+        val prompt: LocalizedText,
+        val subline: LocalizedText,
+        val arabic: String,
+        val translation: LocalizedText,
+        val reference: String,
+        val note: LocalizedText,
+        val nextLabel: LocalizedText
+    ) : DeepDiveSection()
+
+    /**
+     * The interactive close of a dive built on the guarding fear (Taqwa): a warm
+     * "forbidden" opening rests, then drifts across the screen and away. The reader
+     * must WITHHOLD - not touch it - and let it pass; holding still until it has
+     * passed resolves into the verse, while reaching for it (a tap) gently resets
+     * the drift. The one close where acting is the failure - restraint is the gesture.
+     */
+    data class Door(
+        val tag: LocalizedText,
+        val prompt: LocalizedText,
+        val subline: LocalizedText,
+        val arabic: String,
+        val translation: LocalizedText,
+        val reference: String,
+        val note: LocalizedText,
+        val nextLabel: LocalizedText
+    ) : DeepDiveSection()
+
+    /**
+     * The interactive close of a dive built on the gathering's answer (al-Kisa):
+     * five dim lights in a low arc - one for each soul beneath the cloak. Each tap
+     * lights the next name in the order the cloak gathered them (Muhammad, Hasan,
+     * Husayn, Ali, Fatima); at five the arc joins into a single glow and resolves
+     * into the salawat formula. A count that COMPLETES at exactly five.
+     */
+    data class Salawat(
+        val tag: LocalizedText,
+        val prompt: LocalizedText,
+        val subline: LocalizedText,
+        val arabic: String,
+        val translation: LocalizedText,
+        val reference: String,
+        val note: LocalizedText,
+        val nextLabel: LocalizedText
+    ) : DeepDiveSection()
+
     /** Act number for the persistent depth stepper (0 = opening, 4 = close). */
     val actNumber: Int
         get() = when (this) {
@@ -155,7 +284,9 @@ sealed class DeepDiveSection {
             is Narration -> act
             is Response -> act
             is Climax -> act
-            is ReflectionPrompt, is Dua, is Closing -> 4
+            is Refrain -> act
+            is ReflectionPrompt, is Dua, is Closing,
+            is Release, is Count, is Sujud, is Extinguish, is Door, is Salawat -> 4
         }
 }
 
@@ -170,7 +301,27 @@ data class DeepDive(
     val subtitle: LocalizedText,
     val estMinutes: Int,
     val acts: List<ActInfo>,
-    val sections: List<DeepDiveSection>
+    val sections: List<DeepDiveSection>,
+    /**
+     * Noun in the movement-card chrome ("THE ENDURING - STATION 1 OF 3") - each
+     * dive's own spine vocabulary: Depth (Yaqin), Station (Sabr), Motion
+     * (Tawakkul), Tongue (Shukr).
+     */
+    val stageNoun: String = "Depth",
+    /** CTA under the open beat. "Descend" for the classic dives; "Ascend" for Salah. */
+    val descendCta: String = "Descend",
+    /** CTA under the orientation beat. */
+    val beginCta: String = "Begin the descent",
+    /** Subline under the threshold-map title. */
+    val mapLine: String = "The map for everything below.",
+    /** The big label on movement cards and the place-bar noun ("Movement I - ..."). */
+    val stageWord: String = "Movement",
+    /** The line in the Amin block before the dive's `close` clause. */
+    val endLine: String = "The descent ends.",
+    /** The orientation beat's scroll-hint row - the journey metaphor, not the gesture. */
+    val scrollHint: String = "Scroll to sink deeper",
+    /** True for ascents (Salah): flips the orientation scroll-hint arrow upward. */
+    val scrollHintAscending: Boolean = false
 ) {
     fun actInfo(n: Int): ActInfo? = acts.firstOrNull { it.number == n }
 }

@@ -89,7 +89,29 @@ import com.thaqalayn.app.ui.strings.JourneyStrings
 import com.thaqalayn.app.ui.theme.AmiriFamily
 import com.thaqalayn.app.ui.theme.CormorantFamily
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlin.math.max
+import kotlin.random.Random
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.Path
 
 private val romans = listOf("", "I", "II", "III", "IV", "V", "VI", "VII", "VIII")
 
@@ -257,16 +279,23 @@ private fun DivePage(
                         LocalLayoutDirection provides direction
                     ) {
                         when (section) {
-                            is DeepDiveSection.Open -> OpenPage(section, show, lang)
-                            is DeepDiveSection.Orientation -> OrientationPage(section, show, lang)
+                            is DeepDiveSection.Open -> OpenPage(dive, section, show, lang)
+                            is DeepDiveSection.Orientation -> OrientationPage(dive, section, show, lang)
                             is DeepDiveSection.Verse -> VersePage(section, show, lang)
-                            is DeepDiveSection.Depths -> DepthsPage(section, show, lang, openDepths, onToggleDepth)
+                            is DeepDiveSection.Depths -> DepthsPage(dive, section, show, lang, openDepths, onToggleDepth)
                             is DeepDiveSection.Act -> ActPage(dive, section, show, lang)
                             is DeepDiveSection.Narration -> NarrationPage(section, show, lang)
                             is DeepDiveSection.Response -> ResponsePage(section, show, lang)
                             is DeepDiveSection.Climax -> ClimaxPage(section, show, lang)
+                            is DeepDiveSection.Refrain -> RefrainPage(section, show, lang)
                             is DeepDiveSection.ReflectionPrompt -> ReflectionPage(section, show, lang)
-                            is DeepDiveSection.Dua -> DuaPage(section, show, lang, saidAmin, onSayAmin, onBeginAgain)
+                            is DeepDiveSection.Release -> ReleasePage(section, show, lang)
+                            is DeepDiveSection.Count -> CountPage(section, show, lang)
+                            is DeepDiveSection.Sujud -> SujudPage(section, show, lang)
+                            is DeepDiveSection.Extinguish -> ExtinguishPage(section, show, lang)
+                            is DeepDiveSection.Door -> DoorPage(section, show, lang)
+                            is DeepDiveSection.Salawat -> SalawatPage(section, show, lang)
+                            is DeepDiveSection.Dua -> DuaPage(dive, section, show, lang, saidAmin, onSayAmin, onBeginAgain)
                             is DeepDiveSection.Closing -> ClosingPage(section, show, lang, onReadSurah, onClose)
                         }
                     }
@@ -287,6 +316,12 @@ private fun placeInfo(dive: DeepDive, section: DeepDiveSection, lang: Commentary
         is DeepDiveSection.Open, is DeepDiveSection.Orientation, is DeepDiveSection.Act -> null
         is DeepDiveSection.ReflectionPrompt -> "The Return" to dive.acts.size
         is DeepDiveSection.Dua, is DeepDiveSection.Closing -> "The Close" to dive.acts.size
+        is DeepDiveSection.Release -> section.tag.text(lang) to dive.acts.size
+        is DeepDiveSection.Count -> section.tag.text(lang) to dive.acts.size
+        is DeepDiveSection.Sujud -> section.tag.text(lang) to dive.acts.size
+        is DeepDiveSection.Extinguish -> section.tag.text(lang) to dive.acts.size
+        is DeepDiveSection.Door -> section.tag.text(lang) to dive.acts.size
+        is DeepDiveSection.Salawat -> section.tag.text(lang) to dive.acts.size
         else -> {
             val a = section.actNumber
             dive.actInfo(a)?.let { info -> "Movement ${roman(a)} · ${info.name.text(lang)}" to a }
@@ -495,7 +530,7 @@ private fun VerseRecitation(surahNumber: Int, ayah: Int, show: Boolean) {
 // MARK: - Renderers
 
 @Composable
-private fun OpenPage(s: DeepDiveSection.Open, show: Boolean, lang: CommentaryLanguage) {
+private fun OpenPage(dive: DeepDive, s: DeepDiveSection.Open, show: Boolean, lang: CommentaryLanguage) {
     val scale = ReadingSettingsManager.scale
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Reveal(show) {
@@ -530,12 +565,12 @@ private fun OpenPage(s: DeepDiveSection.Open, show: Boolean, lang: CommentaryLan
             )
         }
         Spacer(modifier = Modifier.height(44.dp))
-        Bob("Descend", show)
+        Bob(dive.descendCta, show)
     }
 }
 
 @Composable
-private fun OrientationPage(s: DeepDiveSection.Orientation, show: Boolean, lang: CommentaryLanguage) {
+private fun OrientationPage(dive: DeepDive, s: DeepDiveSection.Orientation, show: Boolean, lang: CommentaryLanguage) {
     val scale = ReadingSettingsManager.scale
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Reveal(show) {
@@ -558,7 +593,7 @@ private fun OrientationPage(s: DeepDiveSection.Orientation, show: Boolean, lang:
         Reveal(show, 0.35) { Box(modifier = Modifier.padding(vertical = 24.dp)) { Hairline() } }
         Reveal(show, 0.5) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                HintRow(Icons.Filled.ArrowDownward, "Scroll to sink deeper")
+                HintRow(if (dive.scrollHintAscending) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward, dive.scrollHint)
                 HintRow(Icons.Filled.TouchApp, "Tap what draws you")
                 HintRow(Icons.Filled.EditNote, "Reflect at the end")
             }
@@ -575,7 +610,7 @@ private fun OrientationPage(s: DeepDiveSection.Orientation, show: Boolean, lang:
             )
         }
         Spacer(modifier = Modifier.height(30.dp))
-        Bob("Begin the descent", show, 0.9)
+        Bob(dive.beginCta, show, 0.9)
     }
 }
 
@@ -636,6 +671,7 @@ private fun VersePage(s: DeepDiveSection.Verse, show: Boolean, lang: CommentaryL
 
 @Composable
 private fun DepthsPage(
+    dive: DeepDive,
     s: DeepDiveSection.Depths,
     show: Boolean,
     lang: CommentaryLanguage,
@@ -646,7 +682,7 @@ private fun DepthsPage(
         Reveal(show, 0.06) { SerifText(s.tag.text(lang), 28f, DeepDivePalette.cream) }
         Spacer(modifier = Modifier.height(4.dp))
         Reveal(show, 0.12) {
-            SerifText("The map for everything below.", 15f, DeepDivePalette.mute, italic = true)
+            SerifText(dive.mapLine, 15f, DeepDivePalette.mute, italic = true)
         }
         Reveal(show, 0.2) {
             Row(
@@ -756,7 +792,7 @@ private fun ActPage(dive: DeepDive, s: DeepDiveSection.Act, show: Boolean, lang:
         }
         Reveal(show, 0.1) {
             Text(
-                text = "Movement".uppercase(),
+                text = dive.stageWord.uppercase(),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 6.sp,
@@ -774,7 +810,7 @@ private fun ActPage(dive: DeepDive, s: DeepDiveSection.Act, show: Boolean, lang:
         Spacer(modifier = Modifier.height(8.dp))
         Reveal(show, 0.36) {
             Text(
-                text = "${info?.name?.text(lang) ?: ""} · Depth ${s.act} of ${dive.acts.size}".uppercase(),
+                text = "${info?.name?.text(lang) ?: ""} · ${dive.stageNoun} ${s.act} of ${dive.acts.size}".uppercase(),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 2.4.sp,
@@ -1024,6 +1060,7 @@ private fun ReflectionPage(s: DeepDiveSection.ReflectionPrompt, show: Boolean, l
 
 @Composable
 private fun DuaPage(
+    dive: DeepDive,
     s: DeepDiveSection.Dua,
     show: Boolean,
     lang: CommentaryLanguage,
@@ -1091,12 +1128,13 @@ private fun DuaPage(
             )
         }
         Spacer(modifier = Modifier.height(30.dp))
-        AminBlock(s.close.text(lang), show, saidAmin, onSayAmin, onBeginAgain, scale)
+        AminBlock(dive.endLine, s.close.text(lang), show, saidAmin, onSayAmin, onBeginAgain, scale)
     }
 }
 
 @Composable
 private fun AminBlock(
+    endLine: String,
     close: String,
     show: Boolean,
     saidAmin: Boolean,
@@ -1130,7 +1168,7 @@ private fun AminBlock(
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             SerifText("Amin.", 26f, DeepDivePalette.goldBright, italic = true)
             Text(
-                text = "The descent ends. $close",
+                text = "$endLine $close",
                 fontSize = 14.sp * scale,
                 textAlign = TextAlign.Center,
                 color = DeepDivePalette.mute
@@ -1222,6 +1260,558 @@ private fun ClosingPage(
                         letterSpacing = 2.sp,
                         color = DeepDivePalette.gold
                     )
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Refrain + interactive close beats (iOS DeepDiveView)
+//
+// al-Rahman's refrain and the six theme-dive gesture closes. Ported faithfully from
+// DeepDiveView.swift: same state machines, timings, and copy. The six closes all
+// resolve through [CloseResolved]; their idle heads share [CloseStatus].
+
+/** A blessing-light in the Shukr count field (unit space). */
+private data class CountDot(val x: Float, val y: Float, val size: Float, val opacity: Float)
+
+/** A fixed audience-light in the Ikhlas extinguish field (unit space). */
+private data class ExtinguishDot(val id: Int, val x: Float, val y: Float, val size: Float)
+
+private val extinguishDots = listOf(
+    ExtinguishDot(0, 0.16f, 0.30f, 6f), ExtinguishDot(1, 0.50f, 0.15f, 5f),
+    ExtinguishDot(2, 0.84f, 0.26f, 6.5f), ExtinguishDot(3, 0.29f, 0.63f, 5.5f),
+    ExtinguishDot(4, 0.68f, 0.54f, 6f), ExtinguishDot(5, 0.13f, 0.82f, 5f),
+    ExtinguishDot(6, 0.52f, 0.85f, 6.5f), ExtinguishDot(7, 0.88f, 0.74f, 5.5f)
+)
+
+/** One soul beneath the cloak in the al-Kisa salawat arc (unit space), gathered in order. */
+private data class SalawatName(val id: Int, val x: Float, val y: Float, val ar: String, val en: String)
+
+private val salawatNames = listOf(
+    SalawatName(0, 0.08f, 0.24f, "مُحَمَّد ﷺ", "Muhammad ﷺ"),
+    SalawatName(1, 0.29f, 0.56f, "الحَسَن", "Hasan"),
+    SalawatName(2, 0.50f, 0.68f, "الحُسَيْن", "Husayn"),
+    SalawatName(3, 0.71f, 0.56f, "عَلِيّ", "Ali"),
+    SalawatName(4, 0.92f, 0.24f, "فَاطِمَة", "Fatima")
+)
+
+/** Small-caps status line under an interactive close; brightens + grows when active. */
+@Composable
+private fun CloseStatus(text: String, active: Boolean, topPad: Dp) {
+    Text(
+        text = text.uppercase(),
+        fontSize = if (active) 12.sp else 10.5.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = if (active) 4.sp else 3.sp,
+        textAlign = TextAlign.Center,
+        color = if (active) DeepDivePalette.goldBright else DeepDivePalette.gold,
+        modifier = Modifier.padding(top = topPad)
+    )
+}
+
+/** The shared resolved state of every interactive close: the verse arrives on a faint glow. */
+@Composable
+private fun CloseResolved(
+    arabic: String,
+    translation: String,
+    reference: String,
+    note: String,
+    nextLabel: String,
+    arabicSize: Float = 30f
+) {
+    val scale = ReadingSettingsManager.scale
+    Column(
+        modifier = Modifier.fillMaxWidth().drawBehind {
+            drawRect(
+                brush = Brush.radialGradient(
+                    colors = listOf(DeepDivePalette.goldBright.copy(alpha = 0.10f), Color.Transparent),
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    radius = size.maxDimension * 0.6f
+                )
+            )
+        },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        ArabicText(arabic, arabicSize * scale, DeepDivePalette.goldBright, lineSpacing = 10f * scale)
+        Spacer(Modifier.height(16.dp))
+        SerifText(
+            translation, 21f * scale, DeepDivePalette.cream, italic = true,
+            lineSpacing = 4f * scale, modifier = Modifier.widthIn(max = 340.dp)
+        )
+        Spacer(Modifier.height(14.dp))
+        Text(
+            text = reference, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+            letterSpacing = 2.sp, color = DeepDivePalette.gold.copy(alpha = 0.85f)
+        )
+        Box(Modifier.padding(vertical = 22.dp)) { Hairline() }
+        Text(
+            text = note, fontSize = 14.sp * scale, lineHeight = 20.sp * scale,
+            textAlign = TextAlign.Center, color = DeepDivePalette.mute,
+            modifier = Modifier.widthIn(max = 320.dp)
+        )
+        Spacer(Modifier.height(30.dp))
+        Bob(nextLabel, true, 0.4)
+    }
+}
+
+/** al-Rahman's recurring question: the refrain glows, the reader answers in the taught reply. */
+@Composable
+private fun RefrainPage(s: DeepDiveSection.Refrain, show: Boolean, lang: CommentaryLanguage) {
+    val scale = ReadingSettingsManager.scale
+    val haptic = LocalHapticFeedback.current
+    var answered by rememberSaveable(s.surah, s.ayah) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        TagLabel(s.tag.text(lang), show)
+        Spacer(Modifier.height(26.dp))
+        Reveal(show, 0.2) { ArabicText(s.arabic, 26f * scale, DeepDivePalette.cream, bold = true, lineSpacing = 12f * scale) }
+        Spacer(Modifier.height(20.dp))
+        Reveal(show, 0.45) {
+            SerifText(s.translation.text(lang), 19f * scale, Color(0xFFCCCCCC), italic = true, lineSpacing = 4f * scale, modifier = Modifier.widthIn(max = 380.dp))
+        }
+        Spacer(Modifier.height(14.dp))
+        Reveal(show, 0.45) { Text(s.reference, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = DeepDivePalette.gold.copy(alpha = 0.85f)) }
+        Reveal(show, 0.7) { Box(Modifier.padding(top = 24.dp, bottom = 18.dp)) { Hairline() } }
+        Reveal(show, 0.7) { SerifText(s.intro.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 340.dp)) }
+        if (answered) {
+            Spacer(Modifier.height(24.dp))
+            Box(Modifier.width(1.dp).height(22.dp).background(Brush.verticalGradient(listOf(DeepDivePalette.goldBright.copy(alpha = 0f), DeepDivePalette.goldBright.copy(alpha = 0.7f)))))
+            Spacer(Modifier.height(10.dp))
+            Text("You Answer".uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 4.sp, color = DeepDivePalette.goldBright)
+            Spacer(Modifier.height(18.dp))
+            ArabicText(s.replyArabic, 26f * scale, DeepDivePalette.goldBright, bold = true, lineSpacing = 10f * scale)
+            Spacer(Modifier.height(10.dp))
+            Text(s.replyTransliteration, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.6.sp, textAlign = TextAlign.Center, color = DeepDivePalette.mute)
+            Spacer(Modifier.height(14.dp))
+            SerifText(s.replyTranslation.text(lang), 21f * scale, DeepDivePalette.cream, italic = true, lineSpacing = 5f * scale, modifier = Modifier.widthIn(max = 330.dp))
+            Spacer(Modifier.height(16.dp))
+            DuaListenButton(arabic = s.replyArabic)
+            s.teachSource?.let {
+                Spacer(Modifier.height(18.dp))
+                Text(it.text(lang), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, textAlign = TextAlign.Center, color = DeepDivePalette.gold.copy(alpha = 0.8f))
+            }
+            Box(Modifier.padding(top = 24.dp, bottom = 18.dp)) { Hairline() }
+            Text(s.reflection.text(lang), fontSize = 15.sp * scale, lineHeight = 21.sp * scale, textAlign = TextAlign.Center, color = DeepDivePalette.mute, modifier = Modifier.widthIn(max = 340.dp))
+        } else {
+            Reveal(show, 0.95) {
+                Column(
+                    modifier = Modifier.padding(top = 30.dp).pressable { haptic.performHapticFeedback(HapticFeedbackType.LongPress); answered = true },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Filled.ExpandLess, contentDescription = null, tint = DeepDivePalette.goldBright, modifier = Modifier.size(16.dp))
+                    Text(
+                        "Answer Him".uppercase(), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 3.5.sp, color = DeepDivePalette.goldBright,
+                        modifier = Modifier.clip(CircleShape).border(1.dp, DeepDivePalette.goldBright.copy(alpha = 0.35f), CircleShape).padding(horizontal = 26.dp, vertical = 13.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Tawakkul: press and hold the ring (the grip); lifting after it fills IS the release. */
+@Composable
+private fun ReleasePage(s: DeepDiveSection.Release, show: Boolean, lang: CommentaryLanguage) {
+    val scale = ReadingSettingsManager.scale
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    var holding by remember { mutableStateOf(false) }
+    var primed by remember { mutableStateOf(false) }
+    var done by remember { mutableStateOf(false) }
+    val fill by animateFloatAsState(
+        targetValue = if (holding || primed) 1f else 0f,
+        animationSpec = tween(if (holding && !primed) 2200 else 300, easing = if (holding && !primed) LinearEasing else EaseOut),
+        label = "releaseFill"
+    )
+    val core by animateFloatAsState(if (primed) 36f else 14f, tween(500, easing = EaseInOut), label = "releaseCore")
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (done) {
+            CloseResolved(s.arabic, s.translation.text(lang), s.reference, s.note.text(lang), s.nextLabel.text(lang))
+        } else {
+            Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (holding) 0.35f else 1f)) }
+            Spacer(Modifier.height(20.dp))
+            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (holding) 0.45f else 1f)) }
+            Spacer(Modifier.height(14.dp))
+            Reveal(show, 0.3) {
+                SerifText(if (holding) "Hold it. All of it." else s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp).alpha(if (holding) 0.5f else 1f))
+            }
+            Spacer(Modifier.height(34.dp))
+            Reveal(show, 0.5) {
+                Box(
+                    modifier = Modifier.size(120.dp).pointerInput(done) {
+                        detectTapGestures(onPress = {
+                            if (!done) {
+                                holding = true; primed = false
+                                val job = scope.launch { delay(2200); if (holding && !done) { primed = true; haptic.performHapticFeedback(HapticFeedbackType.LongPress) } }
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                tryAwaitRelease()
+                                job.cancel()
+                                if (primed && !done) { done = true; haptic.performHapticFeedback(HapticFeedbackType.LongPress) } else if (!done) holding = false
+                            }
+                        })
+                    },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(Modifier.size(120.dp)) {
+                        val s1 = 1.5.dp.toPx()
+                        drawCircle(DeepDivePalette.gold.copy(alpha = 0.5f), radius = (size.minDimension - s1) / 2f, style = Stroke(width = s1))
+                        val inset = 1.dp.toPx()
+                        drawArc(DeepDivePalette.goldBright, -90f, 360f * fill, false, topLeft = Offset(inset, inset), size = Size(size.width - inset * 2, size.height - inset * 2), style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
+                    }
+                    Box(Modifier.size(core.dp).clip(CircleShape).background(DeepDivePalette.goldBright))
+                }
+            }
+            Reveal(show, 0.6) { CloseStatus(if (primed) "Now - let go" else "Press and hold - that is the grip", primed, 18.dp) }
+        }
+    }
+}
+
+/** Shukr: tap to count blessings; at seven they overrun the finger and cannot be finished. */
+@Composable
+private fun CountPage(s: DeepDiveSection.Count, show: Boolean, lang: CommentaryLanguage) {
+    val scale = ReadingSettingsManager.scale
+    val haptic = LocalHapticFeedback.current
+    var taps by remember { mutableStateOf(0) }
+    var tally by remember { mutableStateOf(0) }
+    var overflow by remember { mutableStateOf(false) }
+    var done by remember { mutableStateOf(false) }
+    val lights = remember { mutableStateListOf<CountDot>() }
+    fun addLight() = lights.add(CountDot(Random.nextFloat() * 0.94f + 0.03f, Random.nextFloat() * 0.90f + 0.05f, Random.nextFloat() * 2f + 2.5f, Random.nextFloat() * 0.45f + 0.5f))
+    LaunchedEffect(overflow) {
+        if (overflow) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            var tick = 0
+            while (tick < 18 && !done) {
+                delay(120); tick++
+                tally += tick * Random.nextInt(2, 6)
+                if (lights.size < 110) repeat(4) { addLight() }
+            }
+            if (!done) { done = true; haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+        }
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth().pointerInput(done, overflow) {
+            detectTapGestures {
+                if (!done && !overflow) {
+                    taps++; tally = taps; addLight(); haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    if (taps >= 7) overflow = true
+                }
+            }
+        },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (done) {
+            CloseResolved(s.arabic, s.translation.text(lang), s.reference, s.note.text(lang), s.nextLabel.text(lang))
+        } else {
+            Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (overflow) 0.35f else 1f)) }
+            Spacer(Modifier.height(20.dp))
+            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (overflow) 0.4f else 1f)) }
+            if (taps == 0) {
+                Spacer(Modifier.height(14.dp))
+                Reveal(show, 0.3) { SerifText(s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
+            } else {
+                Spacer(Modifier.height(22.dp))
+                SerifText("$tally", 54f, DeepDivePalette.goldBright)
+                if (overflow) {
+                    Spacer(Modifier.height(10.dp))
+                    Text("And counting itself".uppercase(), fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.6.sp, color = DeepDivePalette.mute)
+                }
+            }
+            Spacer(Modifier.height(if (taps == 0) 34.dp else 14.dp))
+            Box(Modifier.widthIn(max = 300.dp).fillMaxWidth().height(190.dp)) {
+                Canvas(Modifier.fillMaxSize()) {
+                    if (lights.isEmpty()) {
+                        drawCircle(DeepDivePalette.goldBright, radius = 7.dp.toPx(), center = Offset(size.width / 2, size.height / 2))
+                    } else {
+                        lights.forEach { l ->
+                            val c = Offset(l.x * size.width, l.y * size.height)
+                            drawCircle(DeepDivePalette.goldBright.copy(alpha = l.opacity * 0.35f), radius = l.size.dp.toPx() * 1.6f, center = c)
+                            drawCircle(DeepDivePalette.goldBright.copy(alpha = l.opacity), radius = l.size.dp.toPx() / 2f, center = c)
+                        }
+                    }
+                }
+            }
+            Reveal(show, 0.6) { CloseStatus(if (overflow) "They outrun the count" else "Tap - each tap, one blessing", overflow, 18.dp) }
+        }
+    }
+}
+
+/** Salah: press and hold; the core sinks to the earth-line (sujud) and, held, the verse resolves. */
+@Composable
+private fun SujudPage(s: DeepDiveSection.Sujud, show: Boolean, lang: CommentaryLanguage) {
+    val scale = ReadingSettingsManager.scale
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    var holding by remember { mutableStateOf(false) }
+    var atBottom by remember { mutableStateOf(false) }
+    var done by remember { mutableStateOf(false) }
+    val coreY by animateFloatAsState(
+        targetValue = if (holding || atBottom) 54f else -54f,
+        animationSpec = tween(if (holding && !atBottom) 2200 else 300, easing = if (holding && !atBottom) LinearEasing else EaseOut),
+        label = "sujudCore"
+    )
+    val warmth by animateFloatAsState(if (holding || atBottom) 0.85f else 0f, tween(if (holding && !atBottom) 2200 else 300), label = "sujudWarm")
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (done) {
+            CloseResolved(s.arabic, s.translation.text(lang), s.reference, s.note.text(lang), s.nextLabel.text(lang))
+        } else {
+            Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (holding) 0.35f else 1f)) }
+            Spacer(Modifier.height(20.dp))
+            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (holding) 0.45f else 1f)) }
+            Spacer(Modifier.height(14.dp))
+            Reveal(show, 0.3) { SerifText(s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp).alpha(if (holding) 0.5f else 1f)) }
+            Spacer(Modifier.height(34.dp))
+            Reveal(show, 0.5) {
+                Box(
+                    modifier = Modifier.size(120.dp).pointerInput(done) {
+                        detectTapGestures(onPress = {
+                            if (!done) {
+                                holding = true
+                                val job = scope.launch {
+                                    delay(2200)
+                                    if (holding && !done) {
+                                        atBottom = true; haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        delay(2000)
+                                        if (holding && !done) { done = true; haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                    }
+                                }
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                tryAwaitRelease()
+                                job.cancel()
+                                if (atBottom && !done) { done = true; haptic.performHapticFeedback(HapticFeedbackType.LongPress) } else if (!done) holding = false
+                            }
+                        })
+                    },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(Modifier.size(120.dp)) {
+                        val r = size.minDimension / 2f
+                        drawCircle(DeepDivePalette.gold.copy(alpha = 0.5f), radius = r - 0.75.dp.toPx(), style = Stroke(width = 1.5.dp.toPx()))
+                        if (warmth > 0f) drawCircle(DeepDivePalette.goldBright.copy(alpha = warmth), radius = r - 1.dp.toPx(), style = Stroke(width = 2.dp.toPx()))
+                        val ly = size.height / 2 + 56.dp.toPx()
+                        drawLine(
+                            Brush.horizontalGradient(listOf(DeepDivePalette.gold.copy(alpha = 0f), DeepDivePalette.gold.copy(alpha = if (atBottom) 0.6f else 0.35f), DeepDivePalette.gold.copy(alpha = 0f))),
+                            Offset(size.width / 2 - 85.dp.toPx(), ly), Offset(size.width / 2 + 85.dp.toPx(), ly), strokeWidth = 1.dp.toPx()
+                        )
+                        val coreR = (if (atBottom) 20f else 12f).dp.toPx() / 2f
+                        drawCircle(DeepDivePalette.goldBright, radius = coreR, center = Offset(size.width / 2, size.height / 2 + coreY.dp.toPx()))
+                    }
+                }
+            }
+            Reveal(show, 0.5) { CloseStatus(if (atBottom) "Stay - this is the nearest point" else "Press and hold - go down", atBottom, 22.dp) }
+        }
+    }
+}
+
+/** Ikhlas: tap each audience-light out; the last will not go out - everything perishes but His Face. */
+@Composable
+private fun ExtinguishPage(s: DeepDiveSection.Extinguish, show: Boolean, lang: CommentaryLanguage) {
+    val scale = ReadingSettingsManager.scale
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    val out = remember { mutableStateListOf<Int>() }
+    var flared by remember { mutableStateOf(false) }
+    var done by remember { mutableStateOf(false) }
+    val remaining = extinguishDots.size - out.size
+    val promptDim = if (flared) 0.35f else (1f - 0.5f * (1f - remaining.toFloat() / extinguishDots.size))
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (done) {
+            CloseResolved(s.arabic, s.translation.text(lang), s.reference, s.note.text(lang), s.nextLabel.text(lang))
+        } else {
+            Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (flared) 0.35f else 1f)) }
+            Spacer(Modifier.height(20.dp))
+            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream, modifier = Modifier.alpha(promptDim)) }
+            if (out.isEmpty()) {
+                Spacer(Modifier.height(14.dp))
+                Reveal(show, 0.3) { SerifText(s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
+            }
+            Spacer(Modifier.height(if (out.isEmpty()) 34.dp else 14.dp))
+            Reveal(show, 0.5) {
+                BoxWithConstraints(Modifier.widthIn(max = 300.dp).fillMaxWidth().height(190.dp)) {
+                    val w = maxWidth; val h = maxHeight
+                    extinguishDots.forEach { d ->
+                        val isOut = out.contains(d.id)
+                        val isLast = !isOut && (extinguishDots.size - out.size) == 1
+                        val isFlared = isLast && flared
+                        Box(
+                            modifier = Modifier.offset(x = w * d.x - 20.dp, y = h * d.y - 20.dp).size(40.dp)
+                                .then(if (!isOut) Modifier.pressable {
+                                    if (!done) {
+                                        if (extinguishDots.size - out.size > 1) { out.add(d.id); haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                        else if (!flared) { flared = true; haptic.performHapticFeedback(HapticFeedbackType.LongPress); scope.launch { delay(1500); if (!done) done = true } }
+                                        else done = true
+                                    }
+                                } else Modifier),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Canvas(Modifier.size(40.dp)) {
+                                val c = Offset(size.width / 2, size.height / 2)
+                                if (isOut) {
+                                    drawCircle(DeepDivePalette.gold.copy(alpha = 0.16f), radius = (d.size + 3).dp.toPx() / 2f, center = c, style = Stroke(width = 1.dp.toPx()))
+                                } else {
+                                    val dia = if (isFlared) d.size * 2.6f else if (isLast) d.size * 1.5f else d.size
+                                    drawCircle(DeepDivePalette.goldBright.copy(alpha = if (isFlared) 0.9f else if (isLast) 0.85f else 0.6f), radius = dia.dp.toPx() * 1.4f / 2f, center = c)
+                                    drawCircle(DeepDivePalette.goldBright, radius = dia.dp.toPx() / 2f, center = c)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Reveal(show, 0.6) { CloseStatus(if (flared) "This one does not go out" else "Tap each light - put it out", flared, 18.dp) }
+        }
+    }
+}
+
+/** Taqwa: a warm forbidden doorway drifts past; withhold - do not touch it - and let it pass. */
+@Composable
+private fun DoorPage(s: DeepDiveSection.Door, show: Boolean, lang: CommentaryLanguage) {
+    val scale = ReadingSettingsManager.scale
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    var started by remember { mutableStateOf(false) }
+    var reached by remember { mutableStateOf(false) }
+    var done by remember { mutableStateOf(false) }
+    val offsetAnim = remember { Animatable(0f) }
+    var driftJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    fun startDrift() {
+        driftJob?.cancel()
+        driftJob = scope.launch {
+            started = true; reached = false
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            offsetAnim.snapTo(0f)
+            offsetAnim.animateTo(1.15f, tween(4000, easing = EaseInOut))
+            if (!done) { done = true; haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+        }
+    }
+    LaunchedEffect(show) { if (show && !done && !started) { delay(1600); if (!done) startDrift() } }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (done) {
+            CloseResolved(s.arabic, s.translation.text(lang), s.reference, s.note.text(lang), s.nextLabel.text(lang), arabicSize = 27f)
+        } else {
+            Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (started) 0.5f else 1f)) }
+            Spacer(Modifier.height(20.dp))
+            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 33f, DeepDivePalette.cream, modifier = Modifier.alpha(if (started || reached) 0.4f else 1f)) }
+            if (!started && !reached) {
+                Spacer(Modifier.height(14.dp))
+                Reveal(show, 0.3) { SerifText(s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
+            }
+            Spacer(Modifier.height(if (started || reached) 18.dp else 30.dp))
+            Reveal(show, 0.5) {
+                BoxWithConstraints(
+                    Modifier.widthIn(max = 300.dp).fillMaxWidth().height(190.dp).pointerInput(done) {
+                        detectTapGestures {
+                            if (!done && started) {
+                                driftJob?.cancel(); reached = true; started = false
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                scope.launch {
+                                    offsetAnim.animateTo(0f, tween(400, easing = EaseInOut))
+                                    delay(1000); reached = false
+                                    if (!done) startDrift()
+                                }
+                            }
+                        }
+                    },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(Modifier.offset(x = maxWidth * 0.62f * offsetAnim.value).alpha(if (reached) 0.4f else 1f)) { DoorGlow() }
+                }
+            }
+            Reveal(show, 0.6) {
+                CloseStatus(
+                    if (reached) "It opens again" else if (started) "Hold still - it is passing" else "Do not touch it - let it pass",
+                    started && !reached, 18.dp
+                )
+            }
+        }
+    }
+}
+
+/** The warm forbidden doorway - the one amber element in an emerald/gold dive. */
+@Composable
+private fun DoorGlow() {
+    Box(
+        modifier = Modifier.size(width = 78.dp, height = 120.dp).clip(RoundedCornerShape(30.dp))
+            .background(Brush.verticalGradient(listOf(Color(0xFFE8C48C).copy(alpha = 0.55f), Color(0xFFC7783B).copy(alpha = 0.24f)))),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Box(
+            modifier = Modifier.padding(top = 8.dp).size(width = 40.dp, height = 86.dp).clip(RoundedCornerShape(20.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFFFFE8BA).copy(alpha = 0.5f), Color.Transparent)))
+        )
+    }
+}
+
+/** al-Kisa: light the five names in the order the cloak gathered them; the fifth completes the salawat. */
+@Composable
+private fun SalawatPage(s: DeepDiveSection.Salawat, show: Boolean, lang: CommentaryLanguage) {
+    val scale = ReadingSettingsManager.scale
+    val haptic = LocalHapticFeedback.current
+    var lit by remember { mutableStateOf(0) }
+    var done by remember { mutableStateOf(false) }
+    fun tap() {
+        if (!done) {
+            if (lit < salawatNames.size - 1) { lit++; haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+            else { lit = salawatNames.size; done = true; haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+        }
+    }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (done) {
+            SalawatField(lit = lit, done = true, onTap = {})
+            Spacer(Modifier.height(22.dp))
+            CloseResolved(s.arabic, s.translation.text(lang), s.reference.uppercase(), s.note.text(lang), s.nextLabel.text(lang), arabicSize = 26f)
+        } else {
+            Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (lit > 0) 0.35f else 1f)) }
+            Spacer(Modifier.height(20.dp))
+            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (lit > 0) 0.4f else 1f)) }
+            if (lit == 0) {
+                Spacer(Modifier.height(14.dp))
+                Reveal(show, 0.3) { SerifText(s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
+            }
+            Spacer(Modifier.height(if (lit == 0) 30.dp else 14.dp))
+            Reveal(show, 0.5) { SalawatField(lit = lit, done = false, onTap = { tap() }) }
+            Reveal(show, 0.6) { CloseStatus(if (lit == salawatNames.size - 1) "One name remains" else "Tap each light - greet them by name", lit == salawatNames.size - 1, 16.dp) }
+        }
+    }
+}
+
+@Composable
+private fun SalawatField(lit: Int, done: Boolean, onTap: () -> Unit) {
+    BoxWithConstraints(
+        Modifier.widthIn(max = 310.dp).fillMaxWidth().height(if (done) 120.dp else 165.dp)
+            .then(if (!done) Modifier.pointerInput(Unit) { detectTapGestures { onTap() } } else Modifier)
+    ) {
+        val w = maxWidth; val h = maxHeight
+        if (done) {
+            Canvas(Modifier.fillMaxSize()) {
+                val p = Path().apply {
+                    moveTo(size.width * 0.08f, size.height * 0.24f + 24.dp.toPx())
+                    quadraticTo(size.width * 0.5f, size.height * 0.95f + 24.dp.toPx(), size.width * 0.92f, size.height * 0.24f + 24.dp.toPx())
+                }
+                drawPath(p, DeepDivePalette.goldBright.copy(alpha = 0.55f), style = Stroke(width = 1.5.dp.toPx()))
+            }
+        }
+        salawatNames.forEach { n ->
+            val isLit = n.id < lit || done
+            Column(
+                modifier = Modifier.offset(x = w * n.x - 42.dp, y = h * n.y + 12.dp).width(84.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Canvas(Modifier.size(18.dp)) {
+                    val c = Offset(size.width / 2, size.height / 2)
+                    if (isLit) {
+                        drawCircle(DeepDivePalette.goldBright.copy(alpha = 0.4f), radius = 10.dp.toPx(), center = c)
+                        drawCircle(DeepDivePalette.goldBright, radius = 6.dp.toPx(), center = c)
+                    } else {
+                        drawCircle(DeepDivePalette.goldBright.copy(alpha = 0.08f), radius = 6.dp.toPx(), center = c)
+                        drawCircle(DeepDivePalette.goldBright.copy(alpha = 0.25f), radius = 6.dp.toPx(), center = c, style = Stroke(width = 1.dp.toPx()))
+                    }
+                }
+                if (isLit && !done) {
+                    ArabicText(n.ar, 15f, DeepDivePalette.goldBright)
+                    Text(n.en.uppercase(), fontSize = 8.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp, color = DeepDivePalette.mute)
                 }
             }
         }

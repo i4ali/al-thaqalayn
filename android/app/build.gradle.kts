@@ -24,8 +24,8 @@ android {
         applicationId = "com.althaqalayn.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
     }
 
     sourceSets {
@@ -94,7 +94,7 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.ui)
-    implementation(libs.billing.ktx)
+    implementation(libs.billing)
     implementation(libs.androidx.splashscreen)
     implementation(libs.androidx.work.runtime.ktx)
     debugImplementation(libs.androidx.compose.ui.tooling)
