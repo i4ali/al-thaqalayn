@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+### Related repo
+
+The iOS version of this app lives at https://github.com/i4ali/thaqalyn. Cross-reference it when porting features or checking parity between platforms.
+
 ### Python Development
 ```bash
 # ⚠️ CRITICAL: ALWAYS USE VIRTUAL ENVIRONMENT ⚠️

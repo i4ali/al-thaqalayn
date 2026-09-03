@@ -12,6 +12,8 @@ import com.thaqalayn.app.data.AhlulbaytQuranManager
 import com.thaqalayn.app.data.DailyMessageProvider
 import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.data.DuasManager
+import com.thaqalayn.app.data.SpecialDuasManager
+import com.thaqalayn.app.data.SpecialDuaTimingsStore
 import com.thaqalayn.app.data.FastingVersesManager
 import com.thaqalayn.app.data.FoodsManager
 import com.thaqalayn.app.data.JourneyManagers
@@ -58,6 +60,8 @@ class ThaqalaynApplication : Application() {
             DailyChallengeProvider.init(this)
             DailyCrosswordProvider.init(this)
             DuasManager.init(this)
+            SpecialDuasManager.init(this)
+            SpecialDuaTimingsStore.init(this)
             LifeMomentsManager.init(this)
             FoodsManager.init(this)
             PropheticStoriesManager.init(this)

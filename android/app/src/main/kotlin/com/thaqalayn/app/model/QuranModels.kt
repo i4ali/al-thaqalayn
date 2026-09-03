@@ -38,7 +38,13 @@ data class Surah(
 @Serializable
 data class Verse(
     val arabicText: String,
+    /**
+     * English translation: Ali Quli Qarai's phrase-by-phrase translation (the standard
+     * modern Shia rendering). Replaced Sahih International on 2026-09-01; refresh or
+     * switch editions with scripts/fetch_quran_english.py.
+     */
     val translation: String,
+    /** Urdu translation (Allama Jawadi). Optional for verses that predate the field. */
     val translationUrdu: String? = null,
     val juz: Int,
     val manzil: Int,

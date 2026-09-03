@@ -3,6 +3,8 @@ package com.thaqalayn.app.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BarChart
@@ -55,6 +57,10 @@ import com.thaqalayn.app.ui.settings.SettingsScreen
 import com.thaqalayn.app.ui.settings.TafsirSourcesScreen
 import com.thaqalayn.app.ui.strings.TabStrings
 import com.thaqalayn.app.ui.dua.DuaDetailScreen
+import com.thaqalayn.app.ui.dua.DuasZiyaratScreen
+import com.thaqalayn.app.ui.dua.SpecialDuaDetailScreen
+import com.thaqalayn.app.audio.DuaStreamPlayer
+import com.thaqalayn.app.ui.components.DuaMiniPlayer
 import com.thaqalayn.app.ui.explore.AhlulbaytEntryDetailScreen
 import com.thaqalayn.app.ui.explore.AhlulbaytQuranScreen
 import com.thaqalayn.app.ui.explore.DuasScreen
@@ -85,10 +91,12 @@ object Routes {
     const val CHALLENGE = "challenge"
     const val CROSSWORD = "crossword"
     const val DUA = "dua/{id}"
+    const val SPECIAL_DUA = "specialDua/{id}"
     const val QUIZ = "quiz/{surah}"
 
     // Explore tab destinations
     const val DUAS = "duas"
+    const val DUAS_ZIYARAT = "duasZiyarat"
     const val LIFE_MOMENTS = "lifeMoments"
     const val LIFE_MOMENT = "lifeMoment/{id}"
     const val FOODS = "foods"
@@ -126,6 +134,7 @@ object Routes {
     fun quiz(surah: Int) = "quiz/$surah"
 
     fun dua(id: String) = "dua/$id"
+    fun specialDua(id: String) = "specialDua/$id"
     fun journey(id: String) = "journey/$id"
     fun journeyDay(id: String, day: Int) = "journeyDay/$id/$day"
     fun journeyDayPreview(id: String, day: Int) = "journeyDayPreview/$id/$day"
@@ -378,6 +387,18 @@ private fun AppNavHost(navController: NavHostController) {
         composable(Routes.DUAS) {
             DuasScreen(navController)
         }
+        composable(Routes.DUAS_ZIYARAT) {
+            DuasZiyaratScreen(navController)
+        }
+        composable(
+            route = Routes.SPECIAL_DUA,
+            arguments = listOf(navArgument("id") { type = NavType.StringType })
+        ) { entry ->
+            SpecialDuaDetailScreen(
+                duaId = entry.arguments?.getString("id") ?: "",
+                navController = navController
+            )
+        }
         composable(Routes.LIFE_MOMENTS) {
             LifeMomentsScreen(navController)
         }
@@ -459,5 +480,17 @@ private fun MainTabs(navController: NavHostController) {
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
         )
+
+        // Docked recitation mini-player: rides above the tab bar whenever a Duas &
+        // Ziyarat stream is loaded but its reader isn't on top (iOS MainTabView).
+        if (DuaStreamPlayer.currentDua != null) {
+            DuaMiniPlayer(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 84.dp)
+            ) { dua -> navController.navigate(Routes.specialDua(dua.id)) }
+        }
     }
 }

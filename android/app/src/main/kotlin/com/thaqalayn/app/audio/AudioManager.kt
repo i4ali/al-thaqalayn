@@ -53,6 +53,14 @@ object AudioManager {
     private var currentSurah: Surah? = null
     private var queuedVerseNumbers: List<Int> = emptyList()
 
+    /**
+     * True while a Duas & Ziyarat recitation streams on this shared ExoPlayer.
+     * Verse-audio state updates are suspended (DuaStreamPlayer drives the player and
+     * reads its state), so the two never fight over the one player or its session.
+     */
+    var streamActive = false
+        private set
+
     fun init(context: Context) {
         appContext = context.applicationContext
         prefs = context.getSharedPreferences("thaqalayn_audio", Context.MODE_PRIVATE)
@@ -61,6 +69,7 @@ object AudioManager {
         val exo = ExoPlayer.Builder(context.applicationContext).build()
         exo.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
+                if (streamActive) return   // DuaStreamPlayer owns the player now
                 playerState = when (state) {
                     Player.STATE_BUFFERING -> AudioPlayerState.BUFFERING
                     Player.STATE_READY -> if (exo.playWhenReady) AudioPlayerState.PLAYING else AudioPlayerState.PAUSED
@@ -74,16 +83,19 @@ object AudioManager {
             }
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (streamActive) return
                 if (exo.playbackState == Player.STATE_READY) {
                     playerState = if (playWhenReady) AudioPlayerState.PLAYING else AudioPlayerState.PAUSED
                 }
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                if (streamActive) return
                 refreshPlayback()
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                if (streamActive) return
                 playerState = AudioPlayerState.ERROR
             }
         })
@@ -152,6 +164,7 @@ object AudioManager {
     /** Play a single verse; tapping the playing verse toggles pause/resume (iOS behavior). */
     fun playVerse(verse: VerseWithTafsir, surah: Surah) {
         val exo = player ?: return
+        if (streamActive) { streamActive = false; DuaStreamPlayer.onSupersededByVerse() }
         val playback = currentPlayback
         if (playback != null && playback.surahNumber == surah.number && playback.verseNumber == verse.number) {
             togglePlayPause()
@@ -171,6 +184,7 @@ object AudioManager {
     fun playVerseSequence(verses: List<VerseWithTafsir>, surah: Surah, startingFrom: Int = 0) {
         val exo = player ?: return
         if (verses.isEmpty()) return
+        if (streamActive) { streamActive = false; DuaStreamPlayer.onSupersededByVerse() }
         ensureSessionStarted()
         currentSurah = surah
         val remaining = verses.drop(startingFrom.coerceIn(0, verses.size - 1))
@@ -192,12 +206,46 @@ object AudioManager {
     }
 
     fun stop() {
+        if (streamActive) { streamActive = false; DuaStreamPlayer.onSupersededByVerse() }
         player?.stop()
         player?.clearMediaItems()
         currentPlayback = null
         currentSurah = null
         queuedVerseNumbers = emptyList()
         playerState = AudioPlayerState.STOPPED
+    }
+
+    /**
+     * Stream a Duas & Ziyarat recitation on the shared player (called by
+     * DuaStreamPlayer). Takes the player over from verse audio; the media session /
+     * notification and background/foreground lifecycle come for free from
+     * PlaybackService, and mutual exclusion is automatic (one player).
+     */
+    fun playStream(id: String, url: String, title: String, artist: String) {
+        val exo = player ?: return
+        currentPlayback = null
+        currentSurah = null
+        queuedVerseNumbers = emptyList()
+        playerState = AudioPlayerState.STOPPED
+        streamActive = true
+        ensureSessionStarted()
+        exo.setMediaItem(
+            MediaItem.Builder()
+                .setUri(url)
+                .setMediaMetadata(
+                    MediaMetadata.Builder().setTitle(title).setArtist(artist).build()
+                )
+                .build()
+        )
+        exo.prepare()
+        exo.play()
+    }
+
+    /** Stop a Duas & Ziyarat stream and hand the shared player back to verse audio. */
+    fun stopStream() {
+        streamActive = false
+        player?.stop()
+        player?.clearMediaItems()
     }
 
     fun skipToNext() {

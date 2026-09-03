@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material3.Icon
@@ -115,6 +116,17 @@ private val exploreSections = listOf(
                 subtitleAr = "20 دعاءً للحظات اليومية",
                 subtitleUr = "روزمرہ لمحات کے لیے 20 دعائیں",
                 route = Routes.DUAS
+            ),
+            ExploreItem(
+                id = "duasZiyarat",
+                icon = Icons.Filled.AutoAwesome,
+                titleEn = "Duas & Ziyarat",
+                titleAr = "الأدعية والزيارات",
+                titleUr = "دعائیں و زیارات",
+                subtitleEn = "The great supplications, with recitation",
+                subtitleAr = "الأدعية العظيمة مع التلاوة",
+                subtitleUr = "عظیم دعائیں، تلاوت کے ساتھ",
+                route = Routes.DUAS_ZIYARAT
             ),
             ExploreItem(
                 id = "foods",

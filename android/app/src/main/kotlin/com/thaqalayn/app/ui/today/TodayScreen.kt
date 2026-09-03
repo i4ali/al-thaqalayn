@@ -81,6 +81,7 @@ import com.thaqalayn.app.ui.components.EmNumeralCircle
 import com.thaqalayn.app.ui.components.PhosphorIcon
 import com.thaqalayn.app.ui.components.pressable
 import com.thaqalayn.app.ui.components.pressableGentle
+import com.thaqalayn.app.ui.bookmarks.rememberBookmarkTranslation
 import com.thaqalayn.app.ui.strings.BookmarkSpotlightStrings
 import com.thaqalayn.app.ui.strings.DailyChallengeStrings
 import com.thaqalayn.app.ui.strings.DailyCrosswordStrings
@@ -694,6 +695,7 @@ private fun BookmarkSpotlight(
 ) {
     val colors = Theme.colors
     val scale = ReadingSettingsManager.scale
+    val translation = rememberBookmarkTranslation(bookmark)
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
@@ -756,7 +758,7 @@ private fun BookmarkSpotlight(
                         )
                     }
                     Text(
-                        text = "“${bookmark.verseTranslation}”",
+                        text = "“$translation”",
                         fontFamily = CormorantFamily,
                         fontWeight = FontWeight.Medium,
                         fontSize = (16 * scale).sp,

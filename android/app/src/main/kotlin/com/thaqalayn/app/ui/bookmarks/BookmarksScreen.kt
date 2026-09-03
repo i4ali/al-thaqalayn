@@ -130,6 +130,7 @@ fun BookmarksScreen(navController: NavHostController) {
 private fun BookmarkCard(bookmark: Bookmark, onOpen: () -> Unit) {
     val colors = Theme.colors
     val shape = RoundedCornerShape(18.dp)
+    val translation = rememberBookmarkTranslation(bookmark)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -171,7 +172,7 @@ private fun BookmarkCard(bookmark: Bookmark, onOpen: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
         Text(
-            text = bookmark.verseTranslation,
+            text = translation,
             fontSize = 14.sp,
             lineHeight = 20.sp,
             color = colors.secondaryText,
