@@ -52,7 +52,6 @@ import com.thaqalayn.app.data.DailyCrosswordManager
 import com.thaqalayn.app.data.DailyCrosswordProvider
 import com.thaqalayn.app.model.CellPos
 import com.thaqalayn.app.model.CrosswordEntry
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.components.EmGoldCTA
 import com.thaqalayn.app.ui.components.ThemedBackground
 import com.thaqalayn.app.ui.components.pressable
@@ -65,7 +64,6 @@ import kotlinx.coroutines.delay
 @Composable
 fun DailyCrosswordScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val puzzle = DailyCrosswordProvider.today ?: return
 
     val entered = remember { mutableStateMapOf<CellPos, Char>() }
@@ -198,14 +196,14 @@ fun DailyCrosswordScreen(navController: NavHostController) {
                 }
                 Spacer(modifier = Modifier.size(26.dp))
                 Text(
-                    text = DailyCrosswordStrings.solved(lang),
+                    text = DailyCrosswordStrings.solved,
                     fontFamily = CormorantFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 40.sp,
                     color = colors.accentBright
                 )
                 Text(
-                    text = "${puzzle.cols}×${puzzle.rows} · ${puzzle.entries.size} ${DailyCrosswordStrings.words(lang)}",
+                    text = "${puzzle.cols}×${puzzle.rows} · ${puzzle.entries.size} ${DailyCrosswordStrings.words}",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = colors.secondaryText
@@ -213,15 +211,15 @@ fun DailyCrosswordScreen(navController: NavHostController) {
                 Spacer(modifier = Modifier.size(20.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     StatPill(icon = Icons.Filled.AccessTime, text = timeString(DailyCrosswordManager.lastCompletion?.seconds ?: seconds))
-                    StatPill(text = "🔥 ${DailyCrosswordStrings.streakLabel(DailyCrosswordManager.streak.currentStreak, lang)}")
+                    StatPill(text = "🔥 ${DailyCrosswordStrings.streakLabel(DailyCrosswordManager.streak.currentStreak)}")
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                EmGoldCTA(title = DailyCrosswordStrings.done(lang), icon = Icons.Filled.Check) {
+                EmGoldCTA(title = DailyCrosswordStrings.done, icon = Icons.Filled.Check) {
                     navController.popBackStack()
                 }
                 Spacer(modifier = Modifier.size(10.dp))
                 Text(
-                    text = DailyCrosswordStrings.comeBackTomorrow(lang),
+                    text = DailyCrosswordStrings.comeBackTomorrow,
                     fontSize = 12.5.sp,
                     fontWeight = FontWeight.Medium,
                     color = colors.tertiaryText,
@@ -258,7 +256,7 @@ fun DailyCrosswordScreen(navController: NavHostController) {
                     Spacer(modifier = Modifier.weight(1f))
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(
-                            text = DailyCrosswordStrings.dailyCrossword(lang),
+                            text = DailyCrosswordStrings.dailyCrossword,
                             fontFamily = CormorantFamily,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 20.sp,
@@ -299,7 +297,7 @@ fun DailyCrosswordScreen(navController: NavHostController) {
                     ) {
                         Icon(Icons.Filled.Lightbulb, contentDescription = null, tint = colors.accentColor, modifier = Modifier.size(16.dp))
                         Text(
-                            text = DailyCrosswordStrings.hint(lang),
+                            text = DailyCrosswordStrings.hint,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp,
@@ -410,7 +408,7 @@ fun DailyCrosswordScreen(navController: NavHostController) {
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         activeEntry?.let { e ->
-                            val dir = if (e.isAcross) DailyCrosswordStrings.across(lang) else DailyCrosswordStrings.down(lang)
+                            val dir = if (e.isAcross) DailyCrosswordStrings.across else DailyCrosswordStrings.down
                             Text(
                                 text = "${e.num} ${dir.uppercase()} · (${e.answer.length})",
                                 fontSize = 11.sp,
@@ -419,7 +417,7 @@ fun DailyCrosswordScreen(navController: NavHostController) {
                                 color = colors.accentColor
                             )
                             Text(
-                                text = e.clue.text(lang),
+                                text = e.clue.en,
                                 fontFamily = CormorantFamily,
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 17.sp,

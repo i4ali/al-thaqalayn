@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -315,6 +318,52 @@ fun ThemedBackground(modifier: Modifier = Modifier) {
                         listOf(colors.primaryBackground, colors.secondaryBackground, colors.tertiaryBackground)
                     )
                 )
+        )
+    }
+}
+
+/**
+ * Full-width done/todo toggle (iOS EmJourneyToggleButton): gold with an empty ring
+ * while to do, tinted with a seal once done. Journey days, "Finish reading" and the
+ * Understanding "Finish" all use it.
+ */
+@Composable
+fun EmJourneyToggleButton(
+    isDone: Boolean,
+    doneLabel: String,
+    todoLabel: String,
+    doneTint: Color,
+    modifier: Modifier = Modifier,
+    onToggle: () -> Unit
+) {
+    val colors = Theme.colors
+    val shape = RoundedCornerShape(15.dp)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .pressable(onClick = onToggle)
+            .shadow(if (isDone) 0.dp else 14.dp, shape, spotColor = colors.accentColor.copy(alpha = 0.28f))
+            .clip(shape)
+            .let {
+                if (isDone) it.background(doneTint.copy(alpha = 0.14f)).border(1.dp, doneTint.copy(alpha = 0.5f), shape)
+                else it.background(colors.accentGradient)
+            }
+            .padding(vertical = 17.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
+    ) {
+        Icon(
+            if (isDone) Icons.Filled.Verified else Icons.Filled.RadioButtonUnchecked,
+            contentDescription = null,
+            tint = if (isDone) doneTint else colors.onAccentText,
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            text = if (isDone) doneLabel else todoLabel,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.3.sp,
+            color = if (isDone) doneTint else colors.onAccentText
         )
     }
 }

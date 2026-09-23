@@ -45,9 +45,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.data.FoodsManager
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.Verse
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
@@ -61,31 +59,29 @@ import com.thaqalayn.app.ui.theme.Theme
 @Composable
 fun FoodDetailScreen(foodId: String, navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
     val context = LocalContext.current
     val food = remember(foodId) { FoodsManager.byId(foodId) } ?: return
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     val verse by produceState<Verse?>(initialValue = null, key1 = food.surahNumber, key2 = food.verseNumber) {
         value = DataManager.shared.loadQuranData().verses["${food.surahNumber}"]?.get("${food.verseNumber}")
     }
 
     fun translation(v: Verse): String =
-        if (lang == CommentaryLanguage.URDU) v.translationUrdu ?: v.translation else v.translation
+        v.translation
 
     val loadedVerse = verse
     val shareText = buildList {
-        add("${food.emoji} ${food.name(lang)}")
+        add("${food.emoji} ${food.name}")
         if (loadedVerse != null) {
             add("Qur'an ${food.surahNumber}:${food.verseNumber}\n${loadedVerse.arabicText}")
             add(translation(loadedVerse))
         } else {
             add("Qur'an ${food.surahNumber}:${food.verseNumber}")
         }
-        add("From the Ahl al-Bayt\n${food.narration(lang)}\n- ${food.narrationSource}")
-        add("From the Sunnah\n${food.sunnahTip(lang)}")
-        add("Nutrition\n${food.nutritionNote(lang)}")
+        add("From the Ahl al-Bayt\n${food.narration}\n- ${food.narrationSource}")
+        add("From the Sunnah\n${food.sunnahTip}")
+        add("Nutrition\n${food.nutritionNote}")
         add("Sent via Thaqalayn")
     }.joinToString("\n\n")
 
@@ -139,18 +135,17 @@ fun FoodDetailScreen(foodId: String, navController: NavHostController) {
                 ) {
                     Text(text = food.emoji, fontSize = 52.sp)
                 }
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    Text(
-                        text = food.name(lang),
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 30.sp,
-                        lineHeight = 36.sp,
-                        color = colors.primaryText,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                Text(
+                    text = food.name,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 30.sp,
+                    lineHeight = 36.sp,
+                    color = colors.primaryText,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
             }
 
             // Verse - reference row opens the ayah in the reader
@@ -194,17 +189,16 @@ fun FoodDetailScreen(foodId: String, navController: NavHostController) {
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
-                        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                            Text(
-                                text = translation(v),
-                                fontFamily = if (lang.isRTL) AmiriFamily else CormorantFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = (16 * scale).sp,
-                                lineHeight = (16 * scale * 1.5f).sp,
-                                color = colors.secondaryText,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                        Text(
+                            text = translation(v),
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = (16 * scale).sp,
+                            lineHeight = (16 * scale * 1.5f).sp,
+                            color = colors.secondaryText,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
                     } ?: Text(
                         text = "Tap to open this verse in the reader.",
                         fontSize = 14.sp,
@@ -216,23 +210,20 @@ fun FoodDetailScreen(foodId: String, navController: NavHostController) {
             InfoCard(
                 label = "From the Ahl al-Bayt",
                 icon = Icons.AutoMirrored.Filled.MenuBook,
-                text = food.narration(lang),
+                text = food.narration,
                 source = food.narrationSource,
-                lang = lang
             )
             InfoCard(
                 label = "From the Sunnah",
                 icon = Icons.Filled.AutoAwesome,
-                text = food.sunnahTip(lang),
+                text = food.sunnahTip,
                 source = null,
-                lang = lang
             )
             InfoCard(
                 label = "Nutrition",
                 icon = Icons.Filled.Eco,
-                text = food.nutritionNote(lang),
+                text = food.nutritionNote,
                 source = null,
-                lang = lang
             )
 
             // Share
@@ -273,51 +264,47 @@ private fun InfoCard(
     icon: ImageVector,
     text: String,
     source: String?,
-    lang: CommentaryLanguage
 ) {
     val colors = Theme.colors
     val scale = ReadingSettingsManager.scale
     EmCard(modifier = Modifier.fillMaxWidth()) {
-        CompositionLocalProvider(
-            LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(icon, contentDescription = null, tint = colors.accentColor, modifier = Modifier.size(12.dp))
-                    Text(
-                        text = label.uppercase(),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp,
-                        color = colors.accentColor
-                    )
-                }
+                Icon(icon, contentDescription = null, tint = colors.accentColor, modifier = Modifier.size(12.dp))
                 Text(
-                    text = text,
-                    fontFamily = if (lang.isRTL) AmiriFamily else CormorantFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = (16 * scale).sp,
-                    lineHeight = (16 * scale * 1.5f).sp,
-                    color = colors.primaryText,
-                    modifier = Modifier.fillMaxWidth()
+                    text = label.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp,
+                    color = colors.accentColor
                 )
-                if (source != null) {
-                    Text(
-                        text = source,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.tertiaryText
-                    )
-                }
+            }
+            Text(
+                text = text,
+                fontFamily = CormorantFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = (16 * scale).sp,
+                lineHeight = (16 * scale * 1.5f).sp,
+                color = colors.primaryText,
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (source != null) {
+                Text(
+                    text = source,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.tertiaryText
+                )
             }
         }
+
     }
 }

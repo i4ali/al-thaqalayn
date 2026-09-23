@@ -1,8 +1,8 @@
 package com.thaqalayn.app.ui.onboarding
 
 // Onboarding pages 12-13 (iOS PersonalizeScreen + FinalScreen).
-// Personalize: display name + preferred reading language, saved straight to
-// UserProfileManager / CommentaryLanguageManager (same as iOS bindings).
+// Personalize: display name, saved straight to UserProfileManager (iOS
+// PersonalizeScreen; the language picker left with the English-only UI).
 // Final: adapted for Android's local-only build - no Supabase, so the iOS
 // Create Account / Sign In screen becomes a single "Begin" send-off.
 
@@ -48,8 +48,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.thaqalayn.app.model.CommentaryLanguage
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.UserProfileManager
 import com.thaqalayn.app.ui.components.pressable
 
@@ -90,7 +88,7 @@ fun PersonalizePage(onContinue: () -> Unit) {
                 }
                 FadeRise(visible = isVisible, delayMillis = 300, riseDistance = 0.dp, durationMillis = 600) {
                     Text(
-                        text = "Add your name and choose the language you'd like to read in. You can change these anytime in Settings.",
+                        text = "Add your name so the app can greet you. You can change it anytime in Settings.",
                         style = onbBody,
                         color = OnbPalette.secondaryText,
                         textAlign = TextAlign.Center,
@@ -149,16 +147,6 @@ fun PersonalizePage(onContinue: () -> Unit) {
                 }
             }
 
-            // Language selector
-            FadeRise(visible = isVisible, delayMillis = 600, riseDistance = 20.dp, durationMillis = 600) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    Text(text = "PREFERRED LANGUAGE", style = onbEyebrow, color = OnbPalette.gold)
-                    CommentaryLanguage.supportedTafsirLanguages.forEach { lang ->
-                        LanguageRow(lang)
-                    }
-                }
-            }
-
             // Continue
             FadeRise(visible = isVisible, delayMillis = 750, riseDistance = 0.dp, durationMillis = 600) {
                 OnbGoldButton(text = "Continue") {
@@ -167,42 +155,6 @@ fun PersonalizePage(onContinue: () -> Unit) {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun LanguageRow(lang: CommentaryLanguage) {
-    val selected = CommentaryLanguageManager.selectedLanguage == lang
-    val shape = RoundedCornerShape(18.dp)
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressable { CommentaryLanguageManager.setLanguage(lang) }
-            .clip(shape)
-            .background(Color.White.copy(alpha = 0.045f))
-            .border(
-                width = if (selected) 1.5.dp else 1.dp,
-                color = if (selected) OnbPalette.gold.copy(alpha = 0.6f) else OnbPalette.gold.copy(alpha = 0.10f),
-                shape = shape
-            )
-            .padding(16.dp)
-    ) {
-        Text(
-            text = lang.displayName,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = OnbPalette.primaryText
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        Icon(
-            imageVector = if (selected) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
-            contentDescription = null,
-            tint = if (selected) OnbPalette.gold else OnbPalette.tertiaryText,
-            modifier = Modifier.size(22.dp)
-        )
     }
 }
 

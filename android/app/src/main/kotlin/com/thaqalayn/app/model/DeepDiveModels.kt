@@ -1,9 +1,9 @@
 package com.thaqalayn.app.model
 
 // Data for one immersive "deep dive": a themed, single-sitting descent rendered
-// by DeepDiveScreen (iOS Models/DeepDive.swift). Prose is localized (EN/UR/AR)
-// via LocalizedText; Qur'an Arabic, references, and surah/ayah numbers stay
-// single-string (identical across languages).
+// by DeepDiveScreen (iOS Models/DeepDive.swift). Prose is LocalizedText, read in
+// English (the UI is English only); Qur'an Arabic, references, and surah/ayah
+// numbers stay single-string.
 
 /** The three-part structure metadata (e.g. Ilm / Ayn / Haqq al-Yaqin). */
 data class ActInfo(

@@ -2,20 +2,6 @@ package com.thaqalayn.app.model
 
 import kotlinx.serialization.Serializable
 
-// MARK: - Daily message (Today reminder banner)
-
-@Serializable
-data class DailyMessage(
-    val id: Int,
-    val arabic: String? = null,
-    val english: String,
-    val surah: Int,
-    val verse: Int
-)
-
-@Serializable
-data class DailyMessagesData(val messages: List<DailyMessage>)
-
 // MARK: - Daily duas
 
 @Serializable
@@ -37,16 +23,11 @@ data class DailyDua(
     val surahNumber: Int? = null,
     val verseNumber: Int? = null
 ) {
-    fun situation(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> situationAr
-        CommentaryLanguage.URDU -> situationUr
-        else -> situationEn
-    }
+    val situation: String
+        get() = situationEn
 
-    fun translation(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.URDU -> translationUr
-        else -> translationEn
-    }
+    val translation: String
+        get() = translationEn
 }
 
 // MARK: - Localized text (en authored; ur/ar filled by translator agents; English fallback)

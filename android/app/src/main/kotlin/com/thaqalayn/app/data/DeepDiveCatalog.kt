@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.CleanHands
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Forest
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Hexagon
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MeetingRoom
@@ -50,6 +51,7 @@ import com.thaqalayn.app.content.surahIbrahimDive
 import com.thaqalayn.app.content.surahKawtharDive
 import com.thaqalayn.app.content.surahMaidaDive
 import com.thaqalayn.app.content.surahMulkDive
+import com.thaqalayn.app.content.surahNahlDive
 import com.thaqalayn.app.content.surahNisaDive
 import com.thaqalayn.app.content.surahRadDive
 import com.thaqalayn.app.content.surahRahmanDive
@@ -384,6 +386,16 @@ data class SurahExperienceDescriptor(
                 subtitle = LocalizedText("The Rock City - what can mockery touch, and what can it never reach?"),
                 available = true, dive = surahHijrDive,
                 coverRes = R.drawable.dive_cover_hijr
+            ),
+            SurahExperienceDescriptor(
+                id = "surah-nahl",
+                surahNumber = 16,
+                title = LocalizedText("Surah al-Nahl"),
+                titleAr = "النَّحْل",
+                icon = Icons.Filled.Hexagon,
+                subtitle = LocalizedText("The Bee - what do you do with a gift you cannot count?"),
+                available = true, dive = surahNahlDive,
+                coverRes = R.drawable.dive_cover_nahl
             ),
             SurahExperienceDescriptor(
                 id = "surah-yasin",

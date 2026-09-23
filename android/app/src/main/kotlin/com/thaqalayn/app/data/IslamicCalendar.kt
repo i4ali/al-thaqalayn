@@ -3,8 +3,6 @@ package com.thaqalayn.app.data
 import android.icu.util.Calendar as IcuCalendar
 import android.icu.util.IslamicCalendar
 import android.icu.util.ULocale
-import com.thaqalayn.app.model.CommentaryLanguage
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import java.text.DateFormat
 import java.util.Calendar
 import java.util.Date
@@ -14,7 +12,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Hijri date helpers for the Today header pill. Uses the Umm al-Qura calendar,
  * matching iOS (Calendar(identifier: .islamicUmmAlQura)). English month names
- * by product decision - the Hijri pill stays English in all app languages.
+ * like the rest of the app.
  */
 object IslamicCalendarManager {
 
@@ -29,6 +27,13 @@ object IslamicCalendarManager {
         cal.calculationType = IslamicCalendar.CalculationType.ISLAMIC_UMALQURA
         cal.time = java.util.Date()
         return cal
+    }
+
+    /** Hijri (1-based month, day) of any instant in the device timezone. */
+    fun hijriMonthDay(date: Date): Pair<Int, Int> {
+        val cal = calendar()
+        cal.time = date
+        return (cal.get(IcuCalendar.MONTH) + 1) to cal.get(IcuCalendar.DAY_OF_MONTH)
     }
 
     fun currentIslamicDay(): Int = calendar().get(IcuCalendar.DAY_OF_MONTH)
@@ -201,14 +206,7 @@ object IslamicCalendarManager {
         return maxOf(0, 30 - currentIslamicDay() + 1)
     }
 
-    // MARK: - Season status lines (iOS *SeasonStatus parity, EN/UR/AR)
-
-    private fun seasonText(en: String, ur: String, ar: String): String =
-        when (CommentaryLanguageManager.selectedLanguage) {
-            CommentaryLanguage.URDU -> ur
-            CommentaryLanguage.ARABIC -> ar
-            else -> en
-        }
+    // MARK: - Season status lines (iOS *SeasonStatus parity)
 
     fun ramadanSeasonStatus(): String {
         val month = currentIslamicMonth()
@@ -217,17 +215,13 @@ object IslamicCalendarManager {
             8 -> {
                 val daysUntil = daysUntilRamadan()
                 if (daysUntil != null && daysUntil > 0) {
-                    seasonText(
-                        en = "$daysUntil day${if (daysUntil == 1) "" else "s"} until Ramadan",
-                        ur = "رمضان میں $daysUntil دن باقی",
-                        ar = "$daysUntil يوماً حتى رمضان"
-                    )
+                    "$daysUntil day${if (daysUntil == 1) "" else "s"} until Ramadan"
                 } else {
-                    seasonText("Ramadan begins soon", "رمضان جلد شروع ہو رہا ہے", "رمضان يبدأ قريباً")
+                    "Ramadan begins soon"
                 }
             }
-            9 -> seasonText("Day $day of Ramadan", "رمضان کا دن $day", "اليوم $day من رمضان")
-            10 -> if (day <= 5) seasonText("Eid Mubarak!", "عید مبارک!", "عيد مبارك!") else ""
+            9 -> "Day $day of Ramadan"
+            10 -> if (day <= 5) "Eid Mubarak!" else ""
             else -> ""
         }
     }
@@ -239,20 +233,16 @@ object IslamicCalendarManager {
             11 -> {
                 val daysUntil = daysUntilHajj()
                 if (daysUntil != null && daysUntil > 0) {
-                    seasonText(
-                        en = "$daysUntil day${if (daysUntil == 1) "" else "s"} until Dhul-Hijjah",
-                        ur = "ذی الحجہ میں $daysUntil دن باقی",
-                        ar = "$daysUntil يوماً حتى ذي الحجة"
-                    )
+                    "$daysUntil day${if (daysUntil == 1) "" else "s"} until Dhul-Hijjah"
                 } else {
-                    seasonText("Dhul-Hijjah begins soon", "ذی الحجہ جلد شروع ہو رہا ہے", "ذو الحجة يبدأ قريباً")
+                    "Dhul-Hijjah begins soon"
                 }
             }
             12 -> when {
-                day == 9 -> seasonText("Day of Arafah", "یومِ عرفہ", "يوم عرفة")
-                day == 10 -> seasonText("Eid al-Adha Mubarak!", "عیدالاضحیٰ مبارک!", "عيد الأضحى مبارك!")
-                day <= 10 -> seasonText("Day $day of Dhul-Hijjah", "ذی الحجہ کا دن $day", "اليوم $day من ذي الحجة")
-                day <= 15 -> seasonText("Eid al-Adha Mubarak!", "عیدالاضحیٰ مبارک!", "عيد الأضحى مبارك!")
+                day == 9 -> "Day of Arafah"
+                day == 10 -> "Eid al-Adha Mubarak!"
+                day <= 10 -> "Day $day of Dhul-Hijjah"
+                day <= 15 -> "Eid al-Adha Mubarak!"
                 else -> ""
             }
             else -> ""
@@ -266,19 +256,15 @@ object IslamicCalendarManager {
             12 -> {
                 val daysUntil = daysUntilMuharram()
                 if (daysUntil != null && daysUntil > 0) {
-                    seasonText(
-                        en = "$daysUntil day${if (daysUntil == 1) "" else "s"} until Muharram",
-                        ur = "محرم میں $daysUntil دن باقی",
-                        ar = "$daysUntil يوماً حتى المحرّم"
-                    )
+                    "$daysUntil day${if (daysUntil == 1) "" else "s"} until Muharram"
                 } else {
-                    seasonText("Muharram begins soon", "محرم جلد شروع ہو رہا ہے", "المحرّم يبدأ قريباً")
+                    "Muharram begins soon"
                 }
             }
             1 -> when {
-                day == 10 -> seasonText("Ashura — Ya Husayn (AS)", "عاشورا — یا حسینؑ", "عاشوراء - يا حسين (ع)")
-                day <= 10 -> seasonText("Day $day of Muharram", "محرم کا دن $day", "اليوم $day من المحرّم")
-                day <= 15 -> seasonText("The mourning continues — Ya Husayn (AS)", "ماتم جاری ہے — یا حسینؑ", "الحزن مستمر - يا حسين (ع)")
+                day == 10 -> "Ashura - Ya Husayn (AS)"
+                day <= 10 -> "Day $day of Muharram"
+                day <= 15 -> "The mourning continues - Ya Husayn (AS)"
                 else -> ""
             }
             else -> ""
@@ -290,9 +276,9 @@ object IslamicCalendarManager {
         val day = currentIslamicDay()
         return when {
             month == 5 && day in 8..18 ->
-                seasonText("First Fatimiyya — Ya Zahra (AS)", "پہلی فاطمیہ — یا زہراؑ", "الفاطمية الأولى - يا زهراء (ع)")
+                "First Fatimiyya - Ya Zahra (AS)"
             month == 6 && day in 1..8 ->
-                seasonText("Second Fatimiyya — Ya Zahra (AS)", "دوسری فاطمیہ — یا زہراؑ", "الفاطمية الثانية - يا زهراء (ع)")
+                "Second Fatimiyya - Ya Zahra (AS)"
             else -> ""
         }
     }
@@ -302,19 +288,15 @@ object IslamicCalendarManager {
         val day = currentIslamicDay()
         return when {
             month == 1 && day >= 11 ->
-                seasonText("The Return — the road to Arbaeen", "راہِ اربعین — عودتِ کاروان", "الطريق إلى الأربعين - عودة القافلة")
+                "The Return - the road to Arbaeen"
             month == 2 && day < 20 -> {
                 val left = 20 - day
-                seasonText(
-                    en = "$left day${if (left == 1) "" else "s"} until Arbaeen",
-                    ur = "اربعین میں $left دن باقی",
-                    ar = "$left يوماً حتى الأربعين"
-                )
+                "$left day${if (left == 1) "" else "s"} until Arbaeen"
             }
             month == 2 && day == 20 ->
-                seasonText("Arbaeen — Ya Husayn (AS)", "اربعین — یا حسینؑ", "الأربعين - يا حسين (ع)")
+                "Arbaeen - Ya Husayn (AS)"
             month == 2 && day <= 25 ->
-                seasonText("Ziyarat of Arbaeen — Ya Husayn (AS)", "زیارتِ اربعین — یا حسینؑ", "زيارة الأربعين - يا حسين (ع)")
+                "Ziyarat of Arbaeen - Ya Husayn (AS)"
             else -> ""
         }
     }
@@ -349,13 +331,7 @@ object IslamicCalendarManager {
         return cal.timeInMillis
     }
 
-    /** Medium-style Gregorian date label in the app language (iOS `medium(_:)`). */
-    fun mediumDateLabel(millis: Long): String {
-        val locale = when (CommentaryLanguageManager.selectedLanguage) {
-            CommentaryLanguage.ARABIC -> Locale("ar")
-            CommentaryLanguage.URDU -> Locale("ur")
-            else -> Locale("en")
-        }
-        return DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(Date(millis))
-    }
+    /** Medium-style Gregorian date label, in English like the rest of the app (iOS `medium(_:)`). */
+    fun mediumDateLabel(millis: Long): String =
+        DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.ENGLISH).format(Date(millis))
 }

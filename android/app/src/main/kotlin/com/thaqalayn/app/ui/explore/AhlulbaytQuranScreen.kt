@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,20 +44,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.data.AhlulbaytQuranManager
 import com.thaqalayn.app.model.AhlulbaytCategory
 import com.thaqalayn.app.model.AhlulbaytEntry
-import com.thaqalayn.app.model.CommentaryLanguage
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmIconChip
@@ -79,32 +74,18 @@ internal fun ahlulbaytCategoryIcon(category: AhlulbaytCategory): ImageVector = w
     AhlulbaytCategory.RIGHTS -> Icons.Filled.Balance
 }
 
-private fun eyebrow(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "العترة الطاهرة"
-    CommentaryLanguage.URDU -> "اہلِ بیت اطہار"
-    else -> "The Purified Family"
-}
+private val eyebrow = "The Purified Family"
 
-private fun title(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "أهل البيت في القرآن"
-    CommentaryLanguage.URDU -> "قرآن میں اہلِ بیت"
-    else -> "Ahl al-Bayt in the Quran"
-}
+private val title = "Ahl al-Bayt in the Quran"
 
-private fun subtitle(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "آياتٌ في فضل آل النبي (ص)"
-    CommentaryLanguage.URDU -> "آلِ رسول کی شان میں آیات"
-    else -> "Verses honoring the Prophet's family"
-}
+private val subtitle = "Verses honoring the Prophet's family"
 
 /** Ahl al-Bayt in the Quran list - searchable, category-filtered, grouped by category (iOS AhlulbaytQuranView). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AhlulbaytQuranScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val entries = AhlulbaytQuranManager.entries
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
     var searchText by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<AhlulbaytCategory?>(null) }
 
@@ -157,35 +138,33 @@ fun AhlulbaytQuranScreen(navController: NavHostController) {
             }
 
             // Header
-            CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 16.dp, bottom = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)
-                ) {
-                    Text(
-                        text = eyebrow(lang).uppercase(),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = if (lang.isRTL) 0.sp else 3.sp,
-                        color = colors.accentColor
-                    )
-                    Text(
-                        text = title(lang),
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 36.sp,
-                        lineHeight = 40.sp,
-                        color = colors.primaryText
-                    )
-                    Text(
-                        text = subtitle(lang),
-                        fontSize = 13.5.sp,
-                        color = colors.secondaryText
-                    )
-                }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 16.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Text(
+                    text = eyebrow.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 3.sp,
+                    color = colors.accentColor
+                )
+                Text(
+                    text = title,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 36.sp,
+                    lineHeight = 40.sp,
+                    color = colors.primaryText
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 13.5.sp,
+                    color = colors.secondaryText
+                )
             }
 
             // Search bar
@@ -287,7 +266,7 @@ fun AhlulbaytQuranScreen(navController: NavHostController) {
                             AhlulbaytCategoryHeader(category)
                         }
                         items(categoryEntries, key = { it.id }) { entry ->
-                            AhlulbaytEntryCard(entry = entry, lang = lang, direction = direction) {
+                            AhlulbaytEntryCard(entry = entry) {
                                 navController.navigate(Routes.ahlulbaytEntry(entry.id))
                             }
                         }
@@ -363,8 +342,6 @@ private fun AhlulbaytCategoryChip(
 @Composable
 private fun AhlulbaytEntryCard(
     entry: AhlulbaytEntry,
-    lang: CommentaryLanguage,
-    direction: LayoutDirection,
     onClick: () -> Unit
 ) {
     val colors = Theme.colors
@@ -373,72 +350,71 @@ private fun AhlulbaytEntryCard(
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pressable(onClick = onClick)
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pressable(onClick = onClick)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            EmIconChip(icon = ahlulbaytCategoryIcon(entry.category))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                EmIconChip(icon = ahlulbaytCategoryIcon(entry.category))
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
+                Text(
+                    text = entry.title,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                    lineHeight = 24.sp,
+                    color = colors.primaryText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                val members = entry.ahlulbaytMembers
+                if (members.isNotEmpty()) {
                     Text(
-                        text = entry.title(lang),
-                        fontFamily = CormorantFamily,
+                        text = members.take(2).joinToString(", "),
+                        fontSize = 12.5.sp,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 20.sp,
-                        lineHeight = 24.sp,
-                        color = colors.primaryText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    val members = entry.ahlulbaytMembers(lang)
-                    if (members.isNotEmpty()) {
-                        Text(
-                            text = members.take(2).joinToString(", "),
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.accentColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Text(
-                        text = entry.verses.take(2).joinToString(" · ") { it.verseReference },
-                        fontSize = 12.sp,
-                        color = colors.tertiaryText,
+                        color = colors.accentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(colors.accentChip)
-                        .border(1.dp, colors.accentColor, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "${entry.verseCount}",
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 17.sp,
-                        color = colors.accentBright
-                    )
-                }
-                Icon(
-                    Icons.Filled.ChevronRight,
-                    contentDescription = null,
-                    tint = colors.tertiaryText,
-                    modifier = Modifier.size(16.dp)
+                Text(
+                    text = entry.verses.take(2).joinToString(" · ") { it.verseReference },
+                    fontSize = 12.sp,
+                    color = colors.tertiaryText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(colors.accentChip)
+                    .border(1.dp, colors.accentColor, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${entry.verseCount}",
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 17.sp,
+                    color = colors.accentBright
+                )
+            }
+            Icon(
+                Icons.Filled.ChevronRight,
+                contentDescription = null,
+                tint = colors.tertiaryText,
+                modifier = Modifier.size(16.dp)
+            )
         }
+
     }
 }

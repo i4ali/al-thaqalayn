@@ -4,9 +4,9 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.thaqalayn.app.data.DataManager
-import com.thaqalayn.app.data.IslamicCalendarManager
+import com.thaqalayn.app.data.DailyVerseProvider
 import com.thaqalayn.app.model.NotificationType
-import com.thaqalayn.app.model.TafsirLayer
+import java.util.Date
 
 /**
  * Fires a pre-built notification (progress, journey-start, Arafah). The content
@@ -65,40 +65,37 @@ class DailyVerseWorker(context: Context, params: WorkerParameters) : CoroutineWo
     }
 
     private suspend fun postTodayVerse() {
-        val manager = NotificationManager
-        manager.loadVerseDataIfNeeded(applicationContext)
-        val verseEntry = manager.selectTodayVerse() ?: return
+        DailyVerseProvider.loadIfNeeded(applicationContext)
+        val selection = DailyVerseProvider.verseFor(Date()) ?: return
 
         val verse = DataManager.shared.loadQuranData()
-            .verses[verseEntry.surah.toString()]
-            ?.get(verseEntry.verse.toString())
+            .verses[selection.surah.toString()]
+            ?.get(selection.verse.toString())
             ?: return
 
-        val monthName = manager.currentMonthData()?.name
-            ?: IslamicCalendarManager.monthName(IslamicCalendarManager.currentIslamicMonth())
-
-        var body = verse.arabicText + "\n\n" + verse.translation
-
-        // Optional: brief tafsir snippet (foundation layer, preferred language).
-        if (manager.preferences.includeTafsir) {
-            val tafsir = DataManager.shared.loadTafsirData(verseEntry.surah)
-                ?.verses?.get(verseEntry.verse.toString())
-            if (tafsir != null) {
-                val snippet = tafsir.content(TafsirLayer.FOUNDATION, manager.preferences.language).take(150)
-                body += "\n\n💡 $snippet..."
-            }
+        // The body is nothing but the verse (iOS 7.4): Arabic, translation, and
+        // optionally the first gem's core insight in place of the old commentary.
+        var body = verse.arabicText
+        if (verse.translation.isNotEmpty()) body += "\n\n" + verse.translation
+        if (NotificationManager.preferences.includeTafsir) {
+            val insight = DataManager.shared.loadTafsirData(selection.surah)
+                ?.verses?.get(selection.verse.toString())
+                ?.quickOverview?.concepts?.firstOrNull()?.coreInsight
+            if (!insight.isNullOrEmpty()) body += "\n\n💡 " + insight.take(150) + "..."
         }
 
-        body += "\n\n📚 Tap to explore the 5-layer tafsir"
+        // On a sacred day the occasion replaces the generic title; the theme
+        // follows it (iOS shows the theme as the notification subtitle).
+        val title = (selection.occasionEn ?: "Verse of the Day") + " · " + selection.themeEn
 
         NotificationPoster.post(
             context = applicationContext,
             identifier = NotificationManager.WORK_DAILY_VERSE,
             type = NotificationType.dailyVerse,
-            title = "Verse of the Day - $monthName",
+            title = title,
             body = body,
-            surah = verseEntry.surah,
-            verse = verseEntry.verse
+            surah = selection.surah,
+            verse = selection.verse
         )
     }
 }

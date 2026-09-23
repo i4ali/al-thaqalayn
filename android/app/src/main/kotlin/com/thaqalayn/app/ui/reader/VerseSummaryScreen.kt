@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -53,10 +52,8 @@ import com.thaqalayn.app.model.AudioPlayerState
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.VerseConcept
 import com.thaqalayn.app.model.VerseWithTafsir
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.components.EmDivider
-import com.thaqalayn.app.ui.components.EmGoldCTA
 import com.thaqalayn.app.ui.components.EmIconChip
 import com.thaqalayn.app.ui.components.EmNumeralCircle
 import com.thaqalayn.app.ui.components.ThemedBackground
@@ -69,8 +66,8 @@ import java.text.Normalizer
 import kotlinx.coroutines.launch
 
 /**
- * "Gems" screen: quick overview of a verse - interactive concept gems plus the
- * short classical insight (iOS VerseSummaryView / QuickOverviewView).
+ * "Gems" screen: quick overview of a verse - its interactive concept gems
+ * (iOS VerseSummaryView / QuickOverviewView).
  */
 @Composable
 fun VerseSummaryScreen(
@@ -79,7 +76,6 @@ fun VerseSummaryScreen(
     navController: NavHostController
 ) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
 
     val loaded by produceState<Pair<Surah, VerseWithTafsir>?>(initialValue = null, key1 = surahNumber, key2 = verseNumber) {
@@ -225,10 +221,19 @@ fun VerseSummaryScreen(
                 }
             }
 
-            item {
-                EmGoldCTA(title = "Read In-Depth Commentary", icon = Icons.Filled.MenuBook) {
-                    navController.popBackStack()
-                    navController.navigate("commentary/$surahNumber/$verseNumber")
+            // No gems for this verse (iOS textBasedOverviewView, which lost its
+            // layer-2 insight and In-Depth button with the five layers in 9.0).
+            if (concepts.isEmpty()) {
+                item { EmDivider(label = "The Core Insight") }
+                item {
+                    Text(
+                        text = "Overview not available for this verse.",
+                        fontFamily = CormorantFamily,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp,
+                        color = colors.secondaryText
+                    )
                 }
             }
         }
@@ -266,7 +271,6 @@ private fun ConceptGemCard(
     onToggle: () -> Unit
 ) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
     val gemColor = remember(concept.colorHex) { colorFromHex(concept.colorHex) }
     val shape = RoundedCornerShape(16.dp)
@@ -291,7 +295,7 @@ private fun ConceptGemCard(
                     .background(gemColor)
             )
             Text(
-                text = concept.getTitle(lang),
+                text = concept.title,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.primaryText,
@@ -305,33 +309,30 @@ private fun ConceptGemCard(
             )
         }
         AnimatedVisibility(visible = expanded) {
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = concept.coreInsight,
+                    fontSize = (15 * scale).sp,
+                    lineHeight = (15 * scale * 1.5f).sp,
+                    color = colors.primaryText
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = concept.getCoreInsight(lang),
-                        fontSize = (15 * scale).sp,
-                        lineHeight = (15 * scale * 1.5f).sp,
+                        text = "WHY IT MATTERS",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp,
+                        color = gemColor
+                    )
+                    Text(
+                        text = concept.whyItMatters,
+                        fontSize = (14 * scale).sp,
+                        lineHeight = (14 * scale * 1.5f).sp,
                         color = colors.primaryText
                     )
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = "WHY IT MATTERS",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.5.sp,
-                            color = gemColor
-                        )
-                        Text(
-                            text = concept.getWhyItMatters(lang),
-                            fontSize = (14 * scale).sp,
-                            lineHeight = (14 * scale * 1.5f).sp,
-                            color = colors.primaryText
-                        )
-                    }
                 }
             }
+
         }
     }
 }

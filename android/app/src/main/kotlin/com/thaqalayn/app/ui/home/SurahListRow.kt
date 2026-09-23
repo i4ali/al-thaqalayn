@@ -37,7 +37,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,18 +45,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp as lerpDp
 import androidx.compose.ui.unit.sp
 import com.thaqalayn.app.data.SurahExperienceDescriptor
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.premium.PremiumManager
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.components.pressable
 import com.thaqalayn.app.ui.strings.JourneyStrings
 import com.thaqalayn.app.ui.theme.Theme
@@ -75,14 +70,13 @@ private val WarmLight = Color(0xFFFFF6DC)
 @Composable
 fun SurahListRow(
     surah: Surah,
-    lang: CommentaryLanguage,
     onOpenSurah: () -> Unit,
     onOpenExperience: (String) -> Unit,
     onShowPaywall: () -> Unit
 ) {
     val experience = SurahExperienceDescriptor.bySurahNumber(surah.number)?.takeIf { it.available }
     if (experience == null) {
-        SurahCard(surah = surah, lang = lang, onClick = onOpenSurah)
+        SurahCard(surah = surah, onClick = onOpenSurah)
         return
     }
 
@@ -99,14 +93,12 @@ fun SurahListRow(
     ) {
         SurahCard(
             surah = surah,
-            lang = lang,
             squaredBottom = true,
             showsBorder = false,
             onClick = onOpenSurah
         )
         JourneyModeToggle(
             locked = !canAccess,
-            lang = lang,
             onRead = onOpenSurah,
             onJourney = {
                 if (canAccess) onOpenExperience(experience.id) else onShowPaywall()
@@ -122,81 +114,77 @@ fun SurahListRow(
 @Composable
 private fun JourneyModeToggle(
     locked: Boolean,
-    lang: CommentaryLanguage,
     onRead: () -> Unit,
     onJourney: () -> Unit
 ) {
     val colors = Theme.colors
     val surfaceFill = if (colors.isMidnightEmerald) colors.glassSurface else Color.White
     val trackShape = RoundedCornerShape(16.dp)
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
-    CompositionLocalProvider(LocalLayoutDirection provides direction) {
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(surfaceFill)
+            .padding(horizontal = 16.dp)
+            .padding(top = 6.dp, bottom = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (locked) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Text(
+                    text = JourneyStrings.premium.uppercase(),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.4.sp,
+                    color = colors.accentColor,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(colors.accentChip)
+                        .border(1.dp, colors.strokeColor, CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+        }
+        // Segmented track (recessed) holding the two equal-width tabs.
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(surfaceFill)
-                .padding(horizontal = 16.dp)
-                .padding(top = 6.dp, bottom = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .clip(trackShape)
+                .background(colors.glassSurfaceRecessed)
+                .border(1.dp, colors.strokeColor, trackShape)
+                .padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (locked) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    Text(
-                        text = JourneyStrings.premium(lang).uppercase(),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.4.sp,
-                        color = colors.accentColor,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(colors.accentChip)
-                            .border(1.dp, colors.strokeColor, CircleShape)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
-                }
-            }
-            // Segmented track (recessed) holding the two equal-width tabs.
+            // Read tab (inactive - pushes the reading view).
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(trackShape)
-                    .background(colors.glassSurfaceRecessed)
-                    .border(1.dp, colors.strokeColor, trackShape)
-                    .padding(6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .weight(1f)
+                    .clip(RoundedCornerShape(11.dp))
+                    .pressable(onClick = onRead)
+                    .padding(vertical = 13.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Read tab (inactive - pushes the reading view).
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(11.dp))
-                        .pressable(onClick = onRead)
-                        .padding(vertical = 13.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Filled.Menu,
-                        contentDescription = null,
-                        tint = colors.secondaryText,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Text(
-                        text = JourneyStrings.readAndTafsir(lang),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        color = colors.secondaryText
-                    )
-                }
-                // Journey tab (active - animated, opens the dive).
-                Box(modifier = Modifier.weight(1f)) {
-                    AnimatedJourneyTab(
-                        label = JourneyStrings.journey(lang),
-                        onTap = onJourney
-                    )
-                }
+                Icon(
+                    Icons.Filled.Menu,
+                    contentDescription = null,
+                    tint = colors.secondaryText,
+                    modifier = Modifier.size(15.dp)
+                )
+                Text(
+                    text = JourneyStrings.readAndTafsir,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    color = colors.secondaryText
+                )
+            }
+            // Journey tab (active - animated, opens the dive).
+            Box(modifier = Modifier.weight(1f)) {
+                AnimatedJourneyTab(
+                    label = JourneyStrings.journey,
+                    onTap = onJourney
+                )
             }
         }
     }

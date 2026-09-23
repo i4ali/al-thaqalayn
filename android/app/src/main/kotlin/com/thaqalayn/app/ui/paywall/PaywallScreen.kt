@@ -30,7 +30,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -84,12 +83,12 @@ private data class LayerInfo(
     val isGold: Boolean = false
 )
 
+/** The four parts of a passage's Understanding, in reading order (iOS 9.0 ladder). */
 private val layers = listOf(
-    LayerInfo(1, "Foundation", "Historical context & basics"),
-    LayerInfo(2, "Classical Shia", "Tabatabai & Tabrisi"),
-    LayerInfo(3, "Contemporary", "Modern perspectives"),
-    LayerInfo(4, "Ahlul Bayt", "Wisdom of the Infallibles"),
-    LayerInfo(5, "Comparative", "Shia & Sunni, side by side", isGold = true)
+    LayerInfo(1, "Essay", "The passage told once, in order"),
+    LayerInfo(2, "Verse by verse", "Notes on the verses that need them"),
+    LayerInfo(3, "Narrations", "From the Imams, with their sources"),
+    LayerInfo(4, "Perspectives", "Where Shia and Sunni readings differ", isGold = true)
 )
 
 private data class FeatureRow(val icon: ImageVector, val title: String, val subtitle: String)
@@ -111,7 +110,7 @@ private fun paywallContextCover(key: String?): Int? = when {
         ?: SurahExperienceDescriptor.byId(key)?.coverRes
 }
 
-/** Premium paywall: art hero band, 5-layer ladder, features, CTA (iOS PaywallView). */
+/** Premium paywall: art hero band, Understanding ladder, features, CTA (iOS PaywallView). */
 @Composable
 fun PaywallScreen(navController: NavHostController, contextCoverKey: String? = null) {
     val colors = Theme.colors
@@ -128,9 +127,8 @@ fun PaywallScreen(navController: NavHostController, contextCoverKey: String? = n
     }
 
     val features = listOf(
-        FeatureRow(Icons.Filled.MenuBook, "5 Layers of Tafsir", "All 114 surahs · English, Urdu & Arabic"),
+        FeatureRow(Icons.Filled.MenuBook, "Understanding", "Every passage, written from its sources"),
         FeatureRow(Icons.Filled.AutoAwesome, "Gems on every verse", "Key concepts and insights at a glance"),
-        FeatureRow(Icons.Filled.Psychology, "Surah quizzes", "Test and deepen your understanding"),
         FeatureRow(Icons.Filled.RecordVoiceOver, "Journeys & Deep Dives", "Seasonal journeys and immersive experiences")
     )
 
@@ -225,10 +223,10 @@ fun PaywallScreen(navController: NavHostController, contextCoverKey: String? = n
                     }
                 }
 
-                // 5-layer ladder
+                // Understanding ladder
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        EmDivider(label = "5 Layers of Tafsir")
+                        EmDivider(label = "Understanding")
                         layers.forEachIndexed { cascadeIndex, layer ->
                             CascadeIn(index = cascadeIndex, reduceMotion = reduceMotion) {
                             val shape = RoundedCornerShape(14.dp)
@@ -319,20 +317,20 @@ fun PaywallScreen(navController: NavHostController, contextCoverKey: String? = n
                     ) {
                         Text("★★★★★", fontSize = 14.sp, color = colors.accentBright, letterSpacing = 2.sp)
                         Text(
-                            "“What I needed”",
+                            "“Very well thought out and put together”",
                             fontFamily = CormorantFamily,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 18.sp,
                             color = colors.primaryText
                         )
                         Text(
-                            "“That's the App I was searching for. Quran (reading, listening, traduction), quiz, daily reminder, Tafsir.”",
+                            "“It's a great companion app that I use daily for reading and reflection. Some of the features are quite unique like journeys, verse insights and deep dives. Amazing work, mashallah!”",
                             fontSize = 14.sp,
                             fontStyle = FontStyle.Italic,
                             lineHeight = 20.sp,
                             color = colors.secondaryText
                         )
-                        Text("BiBiGeRm · App Store review", fontSize = 11.sp, color = colors.tertiaryText)
+                        Text("SyedaRzvi · App Store review", fontSize = 11.sp, color = colors.tertiaryText)
                     }
                 }
             }

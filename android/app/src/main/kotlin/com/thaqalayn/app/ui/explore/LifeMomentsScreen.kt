@@ -29,23 +29,18 @@ import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.data.LifeMomentsManager
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.LifeMoment
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmIconChip
@@ -68,31 +63,17 @@ internal fun momentCategoryIcon(category: String): ImageVector = when (category.
     else -> Icons.AutoMirrored.Filled.MenuBook
 }
 
-private fun eyebrow(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "هداية"
-    CommentaryLanguage.URDU -> "رہنمائی"
-    else -> "Guidance"
-}
+private val eyebrow = "Guidance"
 
-private fun title(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "لحظات الحياة"
-    CommentaryLanguage.URDU -> "زندگی کے لمحات"
-    else -> "Life Moments"
-}
+private val title = "Life Moments"
 
-private fun subtitle(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "اعثر على التوجيه لكل موقف"
-    CommentaryLanguage.URDU -> "ہر موقع کے لیے رہنمائی پائیں"
-    else -> "Find guidance for any situation"
-}
+private val subtitle = "Find guidance for any situation"
 
 /** Quranic guidance for life situations (iOS LifeMomentsView). */
 @Composable
 fun LifeMomentsScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val moments = LifeMomentsManager.moments
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
@@ -118,63 +99,62 @@ fun LifeMomentsScreen(navController: NavHostController) {
                 )
             }
 
-            CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 40.dp)
-                ) {
-                    item {
-                        // Midnight Emerald only: night-shrine band behind the
-                        // header, bleeding behind the status bar (decorative).
-                        Box(modifier = Modifier.fullBleed(horizontal = 20.dp)) {
-                            if (colors.isMidnightEmerald) {
-                                CoverHeaderBand(art = R.drawable.explore_cover_life_moments, height = 280.dp)
-                            }
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(7.dp),
-                                modifier = Modifier
-                                    .statusBarsPadding()
-                                    .padding(horizontal = 20.dp)
-                                    .padding(top = 68.dp, bottom = 6.dp)
-                            ) {
-                            Text(
-                                text = eyebrow(lang).uppercase(),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = if (lang.isRTL) 0.sp else 3.sp,
-                                color = colors.accentColor
-                            )
-                            Text(
-                                text = title(lang),
-                                fontFamily = CormorantFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 36.sp,
-                                lineHeight = 40.sp,
-                                color = colors.primaryText
-                            )
-                            Text(
-                                text = subtitle(lang),
-                                fontSize = 13.5.sp,
-                                color = colors.secondaryText
-                            )
-                            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 40.dp)
+            ) {
+                item {
+                    // Midnight Emerald only: night-shrine band behind the
+                    // header, bleeding behind the status bar (decorative).
+                    Box(modifier = Modifier.fullBleed(horizontal = 20.dp)) {
+                        if (colors.isMidnightEmerald) {
+                            CoverHeaderBand(art = R.drawable.explore_cover_life_moments, height = 280.dp)
                         }
-                    }
-
-                    items(moments, key = { it.id }) { moment ->
-                        MomentCard(moment = moment, lang = lang) {
-                            navController.navigate(Routes.lifeMoment(moment.id))
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(7.dp),
+                            modifier = Modifier
+                                .statusBarsPadding()
+                                .padding(horizontal = 20.dp)
+                                .padding(top = 68.dp, bottom = 6.dp)
+                        ) {
+                        Text(
+                            text = eyebrow.uppercase(),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 3.sp,
+                            color = colors.accentColor
+                        )
+                        Text(
+                            text = title,
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 36.sp,
+                            lineHeight = 40.sp,
+                            color = colors.primaryText
+                        )
+                        Text(
+                            text = subtitle,
+                            fontSize = 13.5.sp,
+                            color = colors.secondaryText
+                        )
                         }
                     }
                 }
+
+                items(moments, key = { it.id }) { moment ->
+                    MomentCard(moment = moment) {
+                        navController.navigate(Routes.lifeMoment(moment.id))
+                    }
+                }
             }
+
         }
     }
 }
 
 @Composable
-private fun MomentCard(moment: LifeMoment, lang: CommentaryLanguage, onClick: () -> Unit) {
+private fun MomentCard(moment: LifeMoment, onClick: () -> Unit) {
     val colors = Theme.colors
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -191,7 +171,7 @@ private fun MomentCard(moment: LifeMoment, lang: CommentaryLanguage, onClick: ()
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = moment.situation(lang),
+                    text = moment.situation,
                     fontFamily = CormorantFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 20.sp,

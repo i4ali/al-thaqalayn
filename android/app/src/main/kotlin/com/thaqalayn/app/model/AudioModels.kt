@@ -24,7 +24,6 @@ data class Reciter(
         val s = surahNumber.toString().padStart(3, '0')
         val v = verseNumber.toString().padStart(3, '0')
         val folder = when (id) {
-            "mishary_rashid_alafasy" -> "Alafasy_128kbps"
             "abdul_rahman_al_sudais" -> "Abdurrahmaan_As-Sudais_192kbps"
             "saad_al_ghamidi" -> "Ghamadi_40kbps"
             "ahmad_ibn_ali_al_ajamy" -> "ahmed_ibn_ali_al_ajamy_128kbps"
@@ -37,12 +36,13 @@ data class Reciter(
 
     companion object {
         val popularReciters = listOf(
+            // Default reciter (iOS 7849856 removed Alafasy and made Al-Dosari the default)
             Reciter(
-                id = "mishary_rashid_alafasy",
-                nameArabic = "مشاري بن راشد العفاسي",
-                nameEnglish = "Mishary Rashid Alafasy",
-                serverURL = "https://server8.mp3quran.net/afs",
-                description = "One of the most popular reciters worldwide with a beautiful voice"
+                id = "yasser_al_dosari",
+                nameArabic = "ياسر الدوسري",
+                nameEnglish = "Yasser Al-Dosari",
+                serverURL = "https://server14.mp3quran.net/yasir",
+                description = "Known for his powerful and emotional recitation"
             ),
             Reciter(
                 id = "abdul_rahman_al_sudais",
@@ -71,13 +71,6 @@ data class Reciter(
                 nameEnglish = "Maher Al-Muaiqly",
                 serverURL = "https://server12.mp3quran.net/maher",
                 description = "Imam of the Prophet's Mosque in Medina"
-            ),
-            Reciter(
-                id = "yasser_al_dosari",
-                nameArabic = "ياسر الدوسري",
-                nameEnglish = "Yasser Al-Dosari",
-                serverURL = "https://server14.mp3quran.net/yasir",
-                description = "Known for his powerful and emotional recitation"
             )
         )
 

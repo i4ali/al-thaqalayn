@@ -117,25 +117,7 @@ data class VerseConcept(
     val title_ar: String? = null,
     val coreInsight_ar: String? = null,
     val whyItMatters_ar: String? = null
-) {
-    fun getTitle(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.URDU -> title_urdu ?: title
-        CommentaryLanguage.ARABIC -> title_ar ?: title
-        else -> title
-    }
-
-    fun getCoreInsight(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.URDU -> coreInsight_urdu ?: coreInsight
-        CommentaryLanguage.ARABIC -> coreInsight_ar ?: coreInsight
-        else -> coreInsight
-    }
-
-    fun getWhyItMatters(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.URDU -> whyItMatters_urdu ?: whyItMatters
-        CommentaryLanguage.ARABIC -> whyItMatters_ar ?: whyItMatters
-        else -> whyItMatters
-    }
-}
+)
 
 @Serializable
 data class QuickOverviewData(
@@ -148,114 +130,15 @@ data class TafsirData(
     val verses: Map<String, TafsirVerse>
 )
 
+/**
+ * Per-verse data decoded from tafsir_N.json. Only the Quick Overview gems are
+ * read now (iOS 8.6); the layered commentary keys those files still carry are
+ * ignored by the decoder. Passage commentary lives in PassageStore.
+ */
 @Serializable
 data class TafsirVerse(
-    val layer1: String,
-    val layer2: String,
-    val layer3: String,
-    val layer4: String,
-    val layer5: String? = null,
-    val layer1_urdu: String? = null,
-    val layer2_urdu: String? = null,
-    val layer3_urdu: String? = null,
-    val layer4_urdu: String? = null,
-    val layer5_urdu: String? = null,
-    val layer1_ar: String? = null,
-    val layer2_ar: String? = null,
-    val layer3_ar: String? = null,
-    val layer4_ar: String? = null,
-    val layer5_ar: String? = null,
-    val layer1_fr: String? = null,
-    val layer2_fr: String? = null,
-    val layer3_fr: String? = null,
-    val layer4_fr: String? = null,
-    val layer5_fr: String? = null,
-    val layer2short: String? = null,
-    val layer2short_urdu: String? = null,
-    val layer2short_ar: String? = null,
-    val layer2short_fr: String? = null,
     val quickOverview: QuickOverviewData? = null
-) {
-    fun content(layer: TafsirLayer, language: CommentaryLanguage): String = when (layer) {
-        TafsirLayer.FOUNDATION -> when (language) {
-            CommentaryLanguage.URDU -> layer1_urdu ?: layer1
-            CommentaryLanguage.ARABIC -> layer1_ar ?: layer1
-            CommentaryLanguage.FRENCH -> layer1_fr ?: layer1
-            else -> layer1
-        }
-        TafsirLayer.CLASSICAL -> when (language) {
-            CommentaryLanguage.URDU -> layer2_urdu ?: layer2
-            CommentaryLanguage.ARABIC -> layer2_ar ?: layer2
-            CommentaryLanguage.FRENCH -> layer2_fr ?: layer2
-            else -> layer2
-        }
-        TafsirLayer.CONTEMPORARY -> when (language) {
-            CommentaryLanguage.URDU -> layer3_urdu ?: layer3
-            CommentaryLanguage.ARABIC -> layer3_ar ?: layer3
-            CommentaryLanguage.FRENCH -> layer3_fr ?: layer3
-            else -> layer3
-        }
-        TafsirLayer.AHLUL_BAYT -> when (language) {
-            CommentaryLanguage.URDU -> layer4_urdu ?: layer4
-            CommentaryLanguage.ARABIC -> layer4_ar ?: layer4
-            CommentaryLanguage.FRENCH -> layer4_fr ?: layer4
-            else -> layer4
-        }
-        TafsirLayer.COMPARATIVE -> when (language) {
-            CommentaryLanguage.URDU -> layer5_urdu ?: layer5 ?: ""
-            CommentaryLanguage.ARABIC -> layer5_ar ?: layer5 ?: ""
-            CommentaryLanguage.FRENCH -> layer5_fr ?: layer5 ?: ""
-            else -> layer5 ?: ""
-        }
-    }
-
-    fun hasContent(layer: TafsirLayer, language: CommentaryLanguage): Boolean = when (layer) {
-        TafsirLayer.FOUNDATION -> when (language) {
-            CommentaryLanguage.ENGLISH -> true
-            CommentaryLanguage.URDU -> layer1_urdu != null
-            CommentaryLanguage.ARABIC -> layer1_ar != null
-            CommentaryLanguage.FRENCH -> layer1_fr != null
-        }
-        TafsirLayer.CLASSICAL -> when (language) {
-            CommentaryLanguage.ENGLISH -> true
-            CommentaryLanguage.URDU -> layer2_urdu != null
-            CommentaryLanguage.ARABIC -> layer2_ar != null
-            CommentaryLanguage.FRENCH -> layer2_fr != null
-        }
-        TafsirLayer.CONTEMPORARY -> when (language) {
-            CommentaryLanguage.ENGLISH -> true
-            CommentaryLanguage.URDU -> layer3_urdu != null
-            CommentaryLanguage.ARABIC -> layer3_ar != null
-            CommentaryLanguage.FRENCH -> layer3_fr != null
-        }
-        TafsirLayer.AHLUL_BAYT -> when (language) {
-            CommentaryLanguage.ENGLISH -> true
-            CommentaryLanguage.URDU -> layer4_urdu != null
-            CommentaryLanguage.ARABIC -> layer4_ar != null
-            CommentaryLanguage.FRENCH -> layer4_fr != null
-        }
-        TafsirLayer.COMPARATIVE -> when (language) {
-            CommentaryLanguage.ENGLISH -> layer5 != null
-            CommentaryLanguage.URDU -> layer5_urdu != null
-            CommentaryLanguage.ARABIC -> layer5_ar != null
-            CommentaryLanguage.FRENCH -> layer5_fr != null
-        }
-    }
-
-    fun getLayer2(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.URDU -> layer2_urdu ?: layer2
-        CommentaryLanguage.ARABIC -> layer2_ar ?: layer2
-        CommentaryLanguage.FRENCH -> layer2_fr ?: layer2
-        else -> layer2
-    }
-
-    fun getLayer2Short(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.URDU -> layer2short_urdu ?: layer2_urdu ?: layer2
-        CommentaryLanguage.ARABIC -> layer2short_ar ?: layer2_ar ?: layer2
-        CommentaryLanguage.FRENCH -> layer2short_fr ?: layer2_fr ?: layer2
-        else -> layer2short ?: layer2
-    }
-}
+)
 
 // MARK: - Display Models
 
@@ -285,57 +168,6 @@ data class VerseWithTafsir(
         sajda = verse.sajda,
         tafsir = tafsir
     )
-
-    /** Verse translation for the given language; only English and Urdu exist for verse text. */
-    fun displayTranslation(language: CommentaryLanguage): String {
-        if (language == CommentaryLanguage.URDU && !translationUrdu.isNullOrEmpty()) {
-            return translationUrdu
-        }
-        return translation
-    }
-
-    /** True when the displayed translation is the Urdu one (render RTL, Arabic-script font). */
-    fun usesUrduTranslation(language: CommentaryLanguage): Boolean =
-        language == CommentaryLanguage.URDU && !translationUrdu.isNullOrEmpty()
-}
-
-// MARK: - Tafsir Layer Types
-
-enum class TafsirLayer(val key: String) {
-    FOUNDATION("layer1"),
-    CLASSICAL("layer2"),
-    CONTEMPORARY("layer3"),
-    AHLUL_BAYT("layer4"),
-    COMPARATIVE("layer5");
-
-    val title: String
-        get() = when (this) {
-            FOUNDATION -> "Foundation"
-            CLASSICAL -> "Classical Shia"
-            CONTEMPORARY -> "Contemporary"
-            AHLUL_BAYT -> "Ahlul Bayt"
-            COMPARATIVE -> "Comparative"
-        }
-
-    val description: String
-        get() = when (this) {
-            FOUNDATION -> "Simple explanations, historical context, contemporary relevance"
-            CLASSICAL -> "Tabatabai, Tabrisi, traditional scholarly consensus"
-            CONTEMPORARY -> "Modern scholars, scientific insights, social justice themes"
-            AHLUL_BAYT -> "Hadith from Imams, theological concepts, spiritual guidance"
-            COMPARATIVE -> "Shia vs Sunni scholarly perspectives"
-        }
-
-    /**
-     * Whether this layer is free for a given surah.
-     * Surah 1: layers 1 & 2 are free. All other surahs: no free layers.
-     */
-    fun isFree(surahNumber: Int): Boolean {
-        if (surahNumber == 1) {
-            return this == FOUNDATION || this == CLASSICAL
-        }
-        return false
-    }
 }
 
 // MARK: - Commentary Language Support
@@ -388,9 +220,40 @@ data class Bookmark(
     val notes: String? = null,
     val tags: List<String> = emptyList(),
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    /**
+     * 1-based passage (ruku) index when the bookmark saves a whole passage; null for
+     * a single verse. A passage bookmark keeps the passage's first verse in
+     * [verseNumber], that verse's Arabic in [verseText] and the passage title in
+     * [verseTranslation]. Records saved before passage bookmarks decode as verses.
+     */
+    val passageIndex: Int? = null
 ) {
     val verseReference: String get() = "$surahNumber:$verseNumber"
+
+    val isPassage: Boolean get() = passageIndex != null
+
+    /**
+     * Lookup key for the verse heart. A passage bookmark never matches, even at its
+     * own first verse, so a verse and the passage holding it can both be saved.
+     */
+    fun matchesVerse(surah: Int, verse: Int): Boolean =
+        passageIndex == null && surahNumber == surah && verseNumber == verse
+
+    fun matchesPassage(surah: Int, index: Int): Boolean =
+        surahNumber == surah && passageIndex == index
+
+    companion object {
+        /** Quran order: surah, then verse, then a passage before the verse it opens on, then save time. */
+        val quranOrder: Comparator<Bookmark> = Comparator { a, b ->
+            when {
+                a.surahNumber != b.surahNumber -> a.surahNumber.compareTo(b.surahNumber)
+                a.verseNumber != b.verseNumber -> a.verseNumber.compareTo(b.verseNumber)
+                a.isPassage != b.isPassage -> if (a.isPassage) -1 else 1
+                else -> a.createdAt.compareTo(b.createdAt)
+            }
+        }
+    }
 }
 
 enum class BookmarkSortOrder(val key: String) {

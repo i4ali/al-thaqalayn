@@ -26,23 +26,18 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.data.FastingVersesManager
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.FastingCategory
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmIconChip
@@ -63,31 +58,17 @@ private fun sfIcon(name: String): ImageVector = when (name) {
     else -> Icons.AutoMirrored.Filled.MenuBook
 }
 
-private fun eyebrow(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "رمضان في القرآن"
-    CommentaryLanguage.URDU -> "قرآن میں رمضان"
-    else -> "Ramadan in the Qur'an"
-}
+private val eyebrow = "Ramadan in the Qur'an"
 
-private fun title(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "الصيام في القرآن"
-    CommentaryLanguage.URDU -> "قرآن میں روزہ"
-    else -> "Fasting in the Quran"
-}
+private val title = "Fasting in the Quran"
 
-private fun subtitle(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "آياتٌ عن الصيام ورمضان"
-    CommentaryLanguage.URDU -> "روزے اور رمضان سے متعلق آیات"
-    else -> "Verses about fasting and Ramadan"
-}
+private val subtitle = "Verses about fasting and Ramadan"
 
 /** Fasting in the Quran - curated verse categories about fasting (iOS FastingVersesView). */
 @Composable
 fun FastingVersesScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val categories = FastingVersesManager.categories
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
@@ -113,63 +94,62 @@ fun FastingVersesScreen(navController: NavHostController) {
                 )
             }
 
-            CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 40.dp)
-                ) {
-                    item {
-                        // Midnight Emerald only: night-shrine band behind the
-                        // header, bleeding behind the status bar (decorative).
-                        Box(modifier = Modifier.fullBleed(horizontal = 20.dp)) {
-                            if (colors.isMidnightEmerald) {
-                                CoverHeaderBand(art = R.drawable.explore_cover_fasting, height = 280.dp)
-                            }
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(7.dp),
-                                modifier = Modifier
-                                    .statusBarsPadding()
-                                    .padding(horizontal = 20.dp)
-                                    .padding(top = 68.dp, bottom = 2.dp)
-                            ) {
-                            Text(
-                                text = eyebrow(lang).uppercase(),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = if (lang.isRTL) 0.sp else 3.sp,
-                                color = colors.accentColor
-                            )
-                            Text(
-                                text = title(lang),
-                                fontFamily = CormorantFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 36.sp,
-                                lineHeight = 40.sp,
-                                color = colors.primaryText
-                            )
-                            Text(
-                                text = subtitle(lang),
-                                fontSize = 13.5.sp,
-                                color = colors.secondaryText
-                            )
-                            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 40.dp)
+            ) {
+                item {
+                    // Midnight Emerald only: night-shrine band behind the
+                    // header, bleeding behind the status bar (decorative).
+                    Box(modifier = Modifier.fullBleed(horizontal = 20.dp)) {
+                        if (colors.isMidnightEmerald) {
+                            CoverHeaderBand(art = R.drawable.explore_cover_fasting, height = 280.dp)
                         }
-                    }
-
-                    items(categories, key = { it.id }) { category ->
-                        FastingCategoryCard(category = category, lang = lang) {
-                            navController.navigate(Routes.fastingCategory(category.id))
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(7.dp),
+                            modifier = Modifier
+                                .statusBarsPadding()
+                                .padding(horizontal = 20.dp)
+                                .padding(top = 68.dp, bottom = 2.dp)
+                        ) {
+                        Text(
+                            text = eyebrow.uppercase(),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 3.sp,
+                            color = colors.accentColor
+                        )
+                        Text(
+                            text = title,
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 36.sp,
+                            lineHeight = 40.sp,
+                            color = colors.primaryText
+                        )
+                        Text(
+                            text = subtitle,
+                            fontSize = 13.5.sp,
+                            color = colors.secondaryText
+                        )
                         }
                     }
                 }
+
+                items(categories, key = { it.id }) { category ->
+                    FastingCategoryCard(category = category) {
+                        navController.navigate(Routes.fastingCategory(category.id))
+                    }
+                }
             }
+
         }
     }
 }
 
 @Composable
-private fun FastingCategoryCard(category: FastingCategory, lang: CommentaryLanguage, onClick: () -> Unit) {
+private fun FastingCategoryCard(category: FastingCategory, onClick: () -> Unit) {
     val colors = Theme.colors
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -186,7 +166,7 @@ private fun FastingCategoryCard(category: FastingCategory, lang: CommentaryLangu
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = category.title(lang),
+                    text = category.title,
                     fontFamily = CormorantFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 20.sp,
@@ -196,7 +176,7 @@ private fun FastingCategoryCard(category: FastingCategory, lang: CommentaryLangu
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = category.description(lang),
+                    text = category.description,
                     fontSize = 13.sp,
                     lineHeight = 17.sp,
                     color = colors.secondaryText,

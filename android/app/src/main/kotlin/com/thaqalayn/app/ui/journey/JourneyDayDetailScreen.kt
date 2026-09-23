@@ -53,19 +53,18 @@ import com.thaqalayn.app.audio.AudioManager
 import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.data.JourneyManagers
 import com.thaqalayn.app.model.AudioPlayerState
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.JourneyDay
 import com.thaqalayn.app.model.JourneyDua
 import com.thaqalayn.app.model.JourneyVerse
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.Verse
 import com.thaqalayn.app.model.VerseWithTafsir
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.DuaListenButton
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmSectionLabel
+import com.thaqalayn.app.ui.components.EmJourneyToggleButton
 import com.thaqalayn.app.ui.components.ThemedBackground
 import com.thaqalayn.app.ui.components.pressable
 import com.thaqalayn.app.ui.strings.JourneyStrings
@@ -82,11 +81,9 @@ import com.thaqalayn.app.ui.theme.Theme
 @Composable
 fun JourneyDayDetailScreen(journeyId: String, dayNumber: Int, navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
     val manager = JourneyManagers.byId(journeyId) ?: return
     val config = journeyUiConfig(journeyId)
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
     var showFullZiyarat by remember { mutableStateOf(false) }
 
     // System back closes the full-ziyarat reader first, not the screen.
@@ -137,14 +134,12 @@ fun JourneyDayDetailScreen(journeyId: String, dayNumber: Int, navController: Nav
             DayDetailHeader(
                 day = day,
                 config = config,
-                lang = lang,
                 isDone = isDone,
                 isAshura = isAshura
             )
 
             DuaCard(
                 dua = day.dua,
-                lang = lang,
                 scale = scale,
                 onReadFullZiyarat = if (day.dua.fullArabic != null) {
                     { showFullZiyarat = true }
@@ -152,13 +147,11 @@ fun JourneyDayDetailScreen(journeyId: String, dayNumber: Int, navController: Nav
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    EmSectionLabel(icon = Icons.Filled.AutoStories, text = JourneyStrings.todaysVerses(lang))
-                }
+                EmSectionLabel(icon = Icons.Filled.AutoStories, text = JourneyStrings.todaysVerses)
+
                 day.verses.forEach { verse ->
                     JourneyVerseCard(
                         verse = verse,
-                        lang = lang,
                         scale = scale,
                         onNavigate = {
                             navController.navigate(Routes.surah(verse.surahNumber, verse.verseNumber))
@@ -169,26 +162,24 @@ fun JourneyDayDetailScreen(journeyId: String, dayNumber: Int, navController: Nav
 
             DetailTextCard(
                 icon = Icons.Outlined.Lightbulb,
-                label = JourneyStrings.tafsirFocus(lang),
-                text = day.localizedTafsir(lang),
-                lang = lang,
+                label = JourneyStrings.tafsirFocus,
+                text = day.tafsirFocus,
                 scale = scale
             )
 
             DetailTextCard(
                 icon = Icons.Filled.FavoriteBorder,
-                label = JourneyStrings.reflection(lang),
-                text = day.localizedReflection(lang),
-                lang = lang,
+                label = JourneyStrings.reflection,
+                text = day.reflection,
                 scale = scale,
                 italic = true,
                 fontSize = 18f
             )
 
-            ToggleButton(
+            EmJourneyToggleButton(
                 isDone = isDone,
-                doneLabel = if (config.isObservance) JourneyStrings.observed(lang) else JourneyStrings.completed(lang),
-                todoLabel = if (config.isObservance) JourneyStrings.markObserved(lang) else JourneyStrings.markComplete(lang),
+                doneLabel = if (config.isObservance) JourneyStrings.observed else JourneyStrings.completed,
+                todoLabel = if (config.isObservance) JourneyStrings.markObserved else JourneyStrings.markComplete,
                 doneTint = if (config.isObservance) colors.secondaryText else colors.semanticGreen,
                 onToggle = {
                     if (isDone) manager.unmarkDayCompleted(dayNumber)
@@ -201,8 +192,7 @@ fun JourneyDayDetailScreen(journeyId: String, dayNumber: Int, navController: Nav
             FullZiyaratOverlay(
                 arabic = day.dua.fullArabic!!,
                 english = day.dua.fullEnglish,
-                source = day.dua.localizedSource(lang),
-                lang = lang,
+                source = day.dua.source,
                 scale = scale,
                 onDismiss = { showFullZiyarat = false }
             )
@@ -215,15 +205,13 @@ fun JourneyDayDetailScreen(journeyId: String, dayNumber: Int, navController: Nav
 private fun DayDetailHeader(
     day: JourneyDay,
     config: JourneyUiConfig,
-    lang: CommentaryLanguage,
     isDone: Boolean,
     isAshura: Boolean
 ) {
     val colors = Theme.colors
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
     val dayLabel =
-        if (config.usesStations) JourneyStrings.stationN(day.dayNumber, lang)
-        else JourneyStrings.dayN(day.dayNumber, lang)
+        if (config.usesStations) JourneyStrings.stationN(day.dayNumber)
+        else JourneyStrings.dayN(day.dayNumber)
     val statusTint = if (config.isObservance) colors.secondaryText else colors.semanticGreen
 
     EmCard(
@@ -232,104 +220,103 @@ private fun DayDetailHeader(
         // Ashura: a deeper, restrained accent edge - emphasis through scale, not ornament.
         borderColor = if (isAshura) colors.accentColor.copy(alpha = 0.5f) else null
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(22.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(colors.accentChip)
+                        .border(1.dp, colors.strokeColor, CircleShape)
+                        .padding(horizontal = 13.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(colors.accentChip)
-                            .border(1.dp, colors.strokeColor, CircleShape)
-                            .padding(horizontal = 13.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(7.dp)
-                    ) {
-                        Icon(
-                            journeyDayIcon(day.icon),
-                            contentDescription = null,
-                            tint = colors.accentColor,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Text(
-                            text = dayLabel,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.accentColor
-                        )
-                    }
-
-                    if (isAshura) {
-                        Row(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(colors.secondaryText.copy(alpha = 0.12f))
-                                .padding(horizontal = 10.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Icon(
-                                Icons.Filled.DarkMode,
-                                contentDescription = null,
-                                tint = colors.secondaryText,
-                                modifier = Modifier.size(11.dp)
-                            )
-                            Text(
-                                text = JourneyStrings.ashura(lang),
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colors.secondaryText
-                            )
-                        }
-                    }
-
-                    if (isDone) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Icon(
-                                Icons.Filled.Verified,
-                                contentDescription = null,
-                                tint = statusTint,
-                                modifier = Modifier.size(11.dp)
-                            )
-                            Text(
-                                text = if (config.isObservance) JourneyStrings.observed(lang)
-                                else JourneyStrings.completed(lang),
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = statusTint
-                            )
-                        }
-                    }
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = day.localizedTheme(lang),
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = if (isAshura) 34.sp else 30.sp,
-                        lineHeight = if (isAshura) 38.sp else 34.sp,
-                        color = colors.primaryText
+                    Icon(
+                        journeyDayIcon(day.icon),
+                        contentDescription = null,
+                        tint = colors.accentColor,
+                        modifier = Modifier.size(13.dp)
                     )
                     Text(
-                        text = day.themeArabic,
-                        fontFamily = AmiriFamily,
-                        fontSize = if (isAshura) 24.sp else 22.sp,
+                        text = dayLabel,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
                         color = colors.accentColor
                     )
                 }
+
+                if (isAshura) {
+                    Row(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(colors.secondaryText.copy(alpha = 0.12f))
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.DarkMode,
+                            contentDescription = null,
+                            tint = colors.secondaryText,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Text(
+                            text = JourneyStrings.ashura,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.secondaryText
+                        )
+                    }
+                }
+
+                if (isDone) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.Verified,
+                            contentDescription = null,
+                            tint = statusTint,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Text(
+                            text = if (config.isObservance) JourneyStrings.observed
+                            else JourneyStrings.completed,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = statusTint
+                        )
+                    }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = day.theme,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = if (isAshura) 34.sp else 30.sp,
+                    lineHeight = if (isAshura) 38.sp else 34.sp,
+                    color = colors.primaryText
+                )
+                Text(
+                    text = day.themeArabic,
+                    fontFamily = AmiriFamily,
+                    fontSize = if (isAshura) 24.sp else 22.sp,
+                    color = colors.accentColor
+                )
             }
         }
+
     }
 }
 
@@ -337,13 +324,10 @@ private fun DayDetailHeader(
 @Composable
 private fun DuaCard(
     dua: JourneyDua,
-    lang: CommentaryLanguage,
     scale: Float,
     onReadFullZiyarat: (() -> Unit)?
 ) {
     val colors = Theme.colors
-    val isRTL = lang.isRTL
-
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -351,11 +335,7 @@ private fun DuaCard(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-            ) {
-                EmSectionLabel(icon = Icons.Filled.VolunteerActivism, text = JourneyStrings.duaZiyarat(lang))
-            }
+            EmSectionLabel(icon = Icons.Filled.VolunteerActivism, text = JourneyStrings.duaZiyarat)
 
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 Text(
@@ -377,7 +357,7 @@ private fun DuaCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = JourneyStrings.readFullZiyarat(lang),
+                        text = JourneyStrings.readFullZiyarat,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.accentColor
@@ -400,30 +380,27 @@ private fun DuaCard(
                 color = colors.secondaryText
             )
 
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = dua.english,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = (17 * scale).sp,
+                    lineHeight = (17 * scale * 1.45f).sp,
+                    color = colors.primaryText,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                dua.source?.let { source ->
                     Text(
-                        text = dua.localizedEnglish(lang),
-                        fontFamily = if (lang == CommentaryLanguage.URDU) AmiriFamily else CormorantFamily,
+                        text = "- $source",
+                        fontSize = 12.5.sp,
                         fontWeight = FontWeight.Medium,
-                        fontSize = (17 * scale).sp,
-                        lineHeight = (17 * scale * 1.45f).sp,
-                        color = colors.primaryText,
+                        color = colors.tertiaryText,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    dua.localizedSource(lang)?.let { source ->
-                        Text(
-                            text = "- $source",
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = colors.tertiaryText,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
                 }
             }
+
         }
     }
 }
@@ -432,7 +409,6 @@ private fun DuaCard(
 @Composable
 private fun JourneyVerseCard(
     verse: JourneyVerse,
-    lang: CommentaryLanguage,
     scale: Float,
     onNavigate: () -> Unit
 ) {
@@ -449,8 +425,6 @@ private fun JourneyVerseCard(
         value = surah to v
     }
     val surahName = loaded?.first?.englishName ?: "Surah ${verse.surahNumber}"
-    val translationIsRTL = lang == CommentaryLanguage.URDU
-
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -503,7 +477,7 @@ private fun JourneyVerseCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = JourneyStrings.fullTafsir(lang),
+                        text = JourneyStrings.fullTafsir,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.accentColor
@@ -529,49 +503,40 @@ private fun JourneyVerseCard(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides if (translationIsRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                ) {
-                    val translation =
-                        if (translationIsRTL) v.translationUrdu ?: v.translation
-                        else v.translation
-                    Text(
-                        text = translation,
-                        fontFamily = if (translationIsRTL) AmiriFamily else CormorantFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = (16 * scale).sp,
-                        lineHeight = (16 * scale * 1.5f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                                Text(
+                    text = v.translation,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = (16 * scale).sp,
+                    lineHeight = (16 * scale * 1.5f).sp,
+                    color = colors.secondaryText,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
             }
 
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.accentChip.copy(alpha = colors.accentChip.alpha * 0.6f))
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.accentChip.copy(alpha = colors.accentChip.alpha * 0.6f))
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Chat,
-                        contentDescription = null,
-                        tint = colors.accentColor,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Text(
-                        text = verse.localizedNote(lang),
-                        fontSize = (13 * scale).sp,
-                        lineHeight = (13 * scale * 1.4f).sp,
-                        color = colors.secondaryText
-                    )
-                }
+                Icon(
+                    Icons.AutoMirrored.Filled.Chat,
+                    contentDescription = null,
+                    tint = colors.accentColor,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = verse.relevanceNote,
+                    fontSize = (13 * scale).sp,
+                    lineHeight = (13 * scale * 1.4f).sp,
+                    color = colors.secondaryText
+                )
             }
+
         }
     }
 }
@@ -582,76 +547,32 @@ private fun DetailTextCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     text: String,
-    lang: CommentaryLanguage,
     scale: Float,
     italic: Boolean = false,
     fontSize: Float = 17f
 ) {
     val colors = Theme.colors
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     EmCard(modifier = Modifier.fillMaxWidth()) {
-        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                EmSectionLabel(icon = icon, text = label)
-                Text(
-                    text = text,
-                    fontFamily = if (lang == CommentaryLanguage.URDU) AmiriFamily else CormorantFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontStyle = if (italic) FontStyle.Italic else FontStyle.Normal,
-                    fontSize = (fontSize * scale).sp,
-                    lineHeight = (fontSize * scale * 1.45f).sp,
-                    color = colors.primaryText,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            EmSectionLabel(icon = icon, text = label)
+            Text(
+                text = text,
+                fontFamily = CormorantFamily,
+                fontWeight = FontWeight.Medium,
+                fontStyle = if (italic) FontStyle.Italic else FontStyle.Normal,
+                fontSize = (fontSize * scale).sp,
+                lineHeight = (fontSize * scale * 1.45f).sp,
+                color = colors.primaryText,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-    }
-}
 
-/** Mark complete/observed toggle (iOS EmJourneyToggleButton). */
-@Composable
-private fun ToggleButton(
-    isDone: Boolean,
-    doneLabel: String,
-    todoLabel: String,
-    doneTint: androidx.compose.ui.graphics.Color,
-    onToggle: () -> Unit
-) {
-    val colors = Theme.colors
-    val shape = RoundedCornerShape(15.dp)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .let {
-                if (isDone) it.background(doneTint.copy(alpha = 0.14f)).border(1.dp, doneTint.copy(alpha = 0.5f), shape)
-                else it.background(colors.accentGradient)
-            }
-            .pressable(onClick = onToggle)
-            .padding(vertical = 17.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
-    ) {
-        Icon(
-            if (isDone) Icons.Filled.Verified else Icons.Filled.RadioButtonUnchecked,
-            contentDescription = null,
-            tint = if (isDone) doneTint else colors.onAccentText,
-            modifier = Modifier.size(18.dp)
-        )
-        Text(
-            text = if (isDone) doneLabel else todoLabel,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.3.sp,
-            color = if (isDone) doneTint else colors.onAccentText
-        )
     }
 }
 
@@ -661,13 +582,10 @@ private fun FullZiyaratOverlay(
     arabic: String,
     english: String?,
     source: String?,
-    lang: CommentaryLanguage,
     scale: Float,
     onDismiss: () -> Unit
 ) {
     val colors = Theme.colors
-    val isRTL = lang.isRTL
-
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
         Column(
@@ -682,7 +600,7 @@ private fun FullZiyaratOverlay(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = JourneyStrings.fullZiyaratTitle(lang),
+                    text = JourneyStrings.fullZiyaratTitle,
                     fontFamily = CormorantFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 24.sp,
@@ -690,7 +608,7 @@ private fun FullZiyaratOverlay(
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = JourneyStrings.done(lang),
+                    text = JourneyStrings.done,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.accentColor,
@@ -720,19 +638,16 @@ private fun FullZiyaratOverlay(
                 DuaListenButton(arabic = arabic)
 
                 if (english != null) {
-                    CompositionLocalProvider(
-                        LocalLayoutDirection provides if (isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                    ) {
-                        Text(
-                            text = english,
-                            fontFamily = CormorantFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = (16 * scale).sp,
-                            lineHeight = (16 * scale * 1.5f).sp,
-                            color = colors.secondaryText,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    Text(
+                        text = english,
+                        fontFamily = CormorantFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = (16 * scale).sp,
+                        lineHeight = (16 * scale * 1.5f).sp,
+                        color = colors.secondaryText,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                 }
 
                 if (source != null) {

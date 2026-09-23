@@ -1,6 +1,10 @@
 package com.thaqalayn.app.data
 
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.thaqalayn.app.model.PassageIndex
 import com.thaqalayn.app.model.QuranData
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.SurahWithTafsir
@@ -25,6 +29,17 @@ class DataManager private constructor(private val appContext: Context) {
     private var quranData: QuranData? = null
     private val quranMutex = Mutex()
 
+    /**
+     * Passage (ruku) boundaries for all 114 surahs, built once alongside the Quran
+     * data. Null until the first load completes; observable, so passage counts and
+     * titles fill in when it lands (iOS DataManager.passageIndex).
+     */
+    var passageIndex by mutableStateOf<PassageIndex?>(null)
+        private set
+
+    /** The Quran data if it has already loaded, without suspending. */
+    val quranDataOrNull: QuranData? get() = quranData
+
     private val tafsirCache = mutableMapOf<Int, TafsirData?>()
     private val tafsirMutex = Mutex()
 
@@ -36,12 +51,14 @@ class DataManager private constructor(private val appContext: Context) {
         quranData?.let { return it }
         return quranMutex.withLock {
             quranData?.let { return it }
-            val loaded = withContext(Dispatchers.IO) {
+            val (loaded, index) = withContext(Dispatchers.IO) {
                 val text = appContext.assets.open("quran_data.json")
                     .bufferedReader().use { it.readText() }
-                json.decodeFromString<QuranData>(text)
+                val decoded = json.decodeFromString<QuranData>(text)
+                decoded to PassageIndex(decoded)
             }
             quranData = loaded
+            passageIndex = index
             loaded
         }
     }

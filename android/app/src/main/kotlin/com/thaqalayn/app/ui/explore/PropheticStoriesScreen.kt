@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,20 +44,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.data.PropheticStoriesManager
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.PropheticStory
 import com.thaqalayn.app.model.StoryCategory
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmIconChip
@@ -79,32 +74,18 @@ internal fun storyCategoryIcon(category: StoryCategory): ImageVector = when (cat
     StoryCategory.WISDOM -> Icons.Filled.Psychology
 }
 
-private fun eyebrow(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "من القرآن"
-    CommentaryLanguage.URDU -> "قرآن سے"
-    else -> "From the Qur'an"
-}
+private val eyebrow = "From the Qur'an"
 
-private fun title(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "قصص الأنبياء"
-    CommentaryLanguage.URDU -> "انبیاء کے قصے"
-    else -> "Prophetic Stories"
-}
+private val title = "Prophetic Stories"
 
-private fun subtitle(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "روايات قرآنية عن الرسل"
-    CommentaryLanguage.URDU -> "رسولوں کے قرآنی واقعات"
-    else -> "Quranic accounts of the messengers"
-}
+private val subtitle = "Quranic accounts of the messengers"
 
 /** Prophetic stories list - searchable, category-filtered, grouped by category (iOS PropheticStoriesView). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PropheticStoriesScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val stories = PropheticStoriesManager.stories
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
     var searchText by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<StoryCategory?>(null) }
 
@@ -157,35 +138,33 @@ fun PropheticStoriesScreen(navController: NavHostController) {
             }
 
             // Header
-            CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 16.dp, bottom = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)
-                ) {
-                    Text(
-                        text = eyebrow(lang).uppercase(),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = if (lang.isRTL) 0.sp else 3.sp,
-                        color = colors.accentColor
-                    )
-                    Text(
-                        text = title(lang),
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 36.sp,
-                        lineHeight = 40.sp,
-                        color = colors.primaryText
-                    )
-                    Text(
-                        text = subtitle(lang),
-                        fontSize = 13.5.sp,
-                        color = colors.secondaryText
-                    )
-                }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 16.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Text(
+                    text = eyebrow.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 3.sp,
+                    color = colors.accentColor
+                )
+                Text(
+                    text = title,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 36.sp,
+                    lineHeight = 40.sp,
+                    color = colors.primaryText
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 13.5.sp,
+                    color = colors.secondaryText
+                )
             }
 
             // Search bar
@@ -287,7 +266,7 @@ fun PropheticStoriesScreen(navController: NavHostController) {
                             CategoryHeader(category)
                         }
                         items(categoryStories, key = { it.id }) { story ->
-                            StoryCard(story = story, lang = lang, direction = direction) {
+                            StoryCard(story = story) {
                                 navController.navigate(Routes.story(story.id))
                             }
                         }
@@ -363,8 +342,6 @@ private fun StoryCategoryChip(
 @Composable
 private fun StoryCard(
     story: PropheticStory,
-    lang: CommentaryLanguage,
-    direction: LayoutDirection,
     onClick: () -> Unit
 ) {
     val colors = Theme.colors
@@ -373,52 +350,51 @@ private fun StoryCard(
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pressable(onClick = onClick)
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pressable(onClick = onClick)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            EmIconChip(icon = storyCategoryIcon(story.category))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                EmIconChip(icon = storyCategoryIcon(story.category))
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = story.prophet(lang),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp,
-                        color = colors.accentColor
-                    )
-                    Text(
-                        text = story.title(lang),
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 20.sp,
-                        lineHeight = 24.sp,
-                        color = colors.primaryText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "${story.verseCount} verse${if (story.verseCount == 1) "" else "s"} · ${story.category.displayName}",
-                        fontSize = 13.sp,
-                        color = colors.secondaryText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Icon(
-                    Icons.Filled.ChevronRight,
-                    contentDescription = null,
-                    tint = colors.tertiaryText,
-                    modifier = Modifier.size(16.dp)
+                Text(
+                    text = story.prophet,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp,
+                    color = colors.accentColor
+                )
+                Text(
+                    text = story.title,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                    lineHeight = 24.sp,
+                    color = colors.primaryText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${story.verseCount} verse${if (story.verseCount == 1) "" else "s"} · ${story.category.displayName}",
+                    fontSize = 13.sp,
+                    color = colors.secondaryText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
+            Icon(
+                Icons.Filled.ChevronRight,
+                contentDescription = null,
+                tint = colors.tertiaryText,
+                modifier = Modifier.size(16.dp)
+            )
         }
+
     }
 }

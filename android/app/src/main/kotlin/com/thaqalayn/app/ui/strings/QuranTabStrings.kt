@@ -1,116 +1,65 @@
 package com.thaqalayn.app.ui.strings
 
-import com.thaqalayn.app.model.CommentaryLanguage
-import com.thaqalayn.app.model.CommentaryLanguage.ARABIC
-import com.thaqalayn.app.model.CommentaryLanguage.URDU
-
 /**
- * Language-driven copy for the Quran tab, keyed off the global language picker.
- * Surah names and meanings stay English by product decision (the Arabic surah
- * name is already shown beside the English one).
+ * Chrome copy for the Quran tab (iOS QuranTabStrings). English only; the Arabic
+ * surah name is shown beside the English one.
  */
 object QuranTabStrings {
-    fun greeting(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "السلام عليكم"; URDU -> "السلام علیکم"; else -> "Assalamu alaykum"
-    }
+    val greeting = "Assalamu alaykum"
 
-    fun nobleQuranEyebrow(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "القرآن الكريم"; URDU -> "قرآنِ کریم"; else -> "The Noble Qur'an"
-    }
+    val nobleQuranEyebrow = "The Noble Qur'an"
 
-    fun readAndReflect(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "اقرأ وتدبّر"; URDU -> "پڑھیں اور غور کریں"; else -> "Read & Reflect"
-    }
+    val readAndReflect = "Read & Reflect"
 
-    fun holyQuran(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "القرآن الكريم"; URDU -> "قرآنِ مجید"; else -> "The Holy Quran"
-    }
+    val holyQuran = "The Holy Quran"
 
-    fun continueReading(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "متابعة القراءة"; URDU -> "مطالعہ جاری رکھیں"; else -> "Continue Reading"
-    }
+    val continueReading = "Continue Reading"
 
-    fun resume(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "استئناف"; URDU -> "جاری رکھیں"; else -> "Resume"
-    }
+    val resume = "Resume"
 
-    fun searchPlaceholder(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "ابحث في السور والآيات والمواضيع…"
-        URDU -> "سورتیں، آیات، موضوعات تلاش کریں…"
-        else -> "Search surahs, verses, themes…"
-    }
+    val searchPlaceholder = "Search surahs, verses, themes…"
 
-    fun surahsCount(n: Int, l: CommentaryLanguage) = when (l) {
-        ARABIC -> "$n سورة"; URDU -> "$n سورتیں"; else -> "$n Surahs"
-    }
+    fun surahsCount(n: Int) = "$n Surahs"
 
-    fun versesCount(n: Int, l: CommentaryLanguage) = when (l) {
-        ARABIC -> "$n آية"; URDU -> "$n آیات"; else -> "$n verses"
-    }
+    fun versesCount(n: Int) = "$n verses"
 
-    /** Maps the data's "Meccan"/"Medinan" revelationType to the active language. */
-    fun revelation(raw: String, l: CommentaryLanguage): String {
-        val isMeccan = raw.equals("Meccan", ignoreCase = true)
-        return when (l) {
-            ARABIC -> if (isMeccan) "مكية" else "مدنية"
-            URDU -> if (isMeccan) "مکی" else "مدنی"
-            else -> raw
-        }
-    }
+    /** The data's "Meccan"/"Medinan" revelationType, shown as-is. */
+    fun revelation(raw: String) = raw
 
-    fun verseOf(n: Int, total: Int, l: CommentaryLanguage) = when (l) {
-        ARABIC -> "الآية $n من $total"; URDU -> "آیت $n از $total"; else -> "Verse $n of $total"
-    }
+    /** Surah-row passage count: "40 passages" / "1 passage". */
+    fun passagesCount(n: Int) = if (n == 1) "1 passage" else "$n passages"
 
-    fun percentComplete(p: Int, l: CommentaryLanguage) = when (l) {
-        ARABIC -> "$p% مكتمل"; URDU -> "$p% مکمل"; else -> "$p% complete"
-    }
+    /** Surah-row passage progress: "3 of 40 passages" / "1 of 1 passage". */
+    fun passagesRead(read: Int, total: Int) = if (total == 1) "$read of 1 passage" else "$read of $total passages"
+
+    /** Continue Reading progress: "3 of 24 passages read". */
+    fun passagesReadOf(read: Int, total: Int) = "$read of $total passages read"
+
+    fun verseOf(n: Int, total: Int) = "Verse $n of $total"
+
+    fun percentComplete(p: Int) = "$p% complete"
 
     // Search results
-    fun surahsLabel(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "السور"; URDU -> "سورتیں"; else -> "Surahs"
-    }
+    val surahsLabel = "Surahs"
 
-    fun versesLabel(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "الآيات"; URDU -> "آیات"; else -> "Verses"
-    }
+    val versesLabel = "Verses"
 
-    fun themesLabel(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "المواضيع"; URDU -> "موضوعات"; else -> "Themes"
-    }
+    val themesLabel = "Themes"
 
-    fun showingFirst(showing: Int, total: Int, l: CommentaryLanguage) = when (l) {
-        ARABIC -> "عرض أول $showing من $total"
-        URDU -> "پہلے $showing از $total دکھائے جا رہے ہیں"
-        else -> "Showing first $showing of $total"
-    }
+    fun showingFirst(showing: Int, total: Int) = "Showing first $showing of $total"
 
-    fun noResults(query: String, l: CommentaryLanguage) = when (l) {
-        ARABIC -> "لا نتائج لـ «$query»"
-        URDU -> "«$query» کے لیے کوئی نتیجہ نہیں"
-        else -> "No results for “$query”"
-    }
+    fun noResults(query: String) = "No results for “$query”"
 }
 
 /** Tab bar labels (iOS MainTabView.tabLabel). */
 object TabStrings {
-    fun today(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "اليوم"; URDU -> "آج"; else -> "Today"
-    }
+    val today = "Today"
 
-    fun quran(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "القرآن"; URDU -> "قرآن"; else -> "Quran"
-    }
+    val quran = "Quran"
 
-    fun explore(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "اكتشف"; URDU -> "دریافت"; else -> "Explore"
-    }
+    val explore = "Explore"
 
-    fun progress(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "التقدّم"; URDU -> "پیش رفت"; else -> "Progress"
-    }
+    val progress = "Progress"
 
-    fun journey(l: CommentaryLanguage) = when (l) {
-        ARABIC -> "رحلة"; URDU -> "سفر"; else -> "Journey"
-    }
+    val journey = "Journey"
 }

@@ -63,14 +63,13 @@ import com.thaqalayn.app.data.DailyChallengeManager
 import com.thaqalayn.app.data.DailyChallengeProvider
 import com.thaqalayn.app.data.DailyCrosswordManager
 import com.thaqalayn.app.data.DailyCrosswordProvider
-import com.thaqalayn.app.data.DailyMessageProvider
+import com.thaqalayn.app.data.DailyVerseProvider
 import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.data.DuasManager
 import com.thaqalayn.app.data.IslamicCalendarManager
+import com.thaqalayn.app.data.PassageStore
 import com.thaqalayn.app.data.ProgressManager
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.Surah
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.settings.UserProfileManager
 import com.thaqalayn.app.ui.Routes
@@ -82,6 +81,9 @@ import com.thaqalayn.app.ui.components.PhosphorIcon
 import com.thaqalayn.app.ui.components.pressable
 import com.thaqalayn.app.ui.components.pressableGentle
 import com.thaqalayn.app.ui.bookmarks.rememberBookmarkTranslation
+import com.thaqalayn.app.ui.bookmarks.referenceLabel
+import com.thaqalayn.app.ui.bookmarks.passageMetaLabel
+import com.thaqalayn.app.ui.bookmarks.BookmarkKindBadge
 import com.thaqalayn.app.ui.strings.BookmarkSpotlightStrings
 import com.thaqalayn.app.ui.strings.DailyChallengeStrings
 import com.thaqalayn.app.ui.strings.DailyCrosswordStrings
@@ -94,16 +96,20 @@ import com.thaqalayn.app.ui.theme.Theme
 @Composable
 fun TodayScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-
     val surahs by produceState(initialValue = emptyList<Surah>()) {
         value = DataManager.shared.surahs()
     }
 
+    val dailySelection = DailyVerseProvider.today
+    val dailyVerseText by produceState<String?>(initialValue = null, dailySelection) {
+        value = dailySelection?.let { sel ->
+            DataManager.shared.loadQuranData().verses[sel.surah.toString()]?.get(sel.verse.toString())?.translation
+        }
+    }
+
     // Day-rollover refresh whenever the tab appears.
     LaunchedEffect(Unit) {
-        DailyMessageProvider.refreshIfDayChanged()
+        DailyVerseProvider.refreshIfDayChanged()
         DailyChallengeProvider.refreshIfDayChanged()
         DailyCrosswordProvider.refreshIfDayChanged()
         DailyCrosswordManager.refreshForToday()
@@ -157,57 +163,57 @@ fun TodayScreen(navController: NavHostController) {
 
         // Greeting
         item {
-            CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = TodayStrings.greeting(UserProfileManager.greetingName, lang),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.5.sp,
-                            color = colors.tertiaryText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        PhosphorIcon(resId = R.drawable.ph_moon_stars_fill, size = 13.dp, tint = colors.accentColor)
-                    }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = TodayStrings.today(lang),
-                        fontFamily = CormorantFamily,
+                        text = TodayStrings.greeting(UserProfileManager.greetingName),
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 40.sp,
-                        color = colors.primaryText
+                        letterSpacing = 0.5.sp,
+                        color = colors.tertiaryText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    PhosphorIcon(resId = R.drawable.ph_moon_stars_fill, size = 13.dp, tint = colors.accentColor)
                 }
+                Text(
+                    text = TodayStrings.today,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 40.sp,
+                    color = colors.primaryText
+                )
             }
+
         }
 
-        // Daily reminder hero (gold gradient)
-        val message = DailyMessageProvider.today
-        if (message != null) {
+        // Daily reminder hero: today's verse from the 365-verse pool, its
+        // translation hydrated from quran_data.json (iOS DailyVerseProvider).
+        val selection = DailyVerseProvider.today
+        val headline = dailyVerseText
+        if (selection != null && headline != null) {
             item {
-                val surahName = surahs.firstOrNull { it.number == message.surah }?.englishName
-                    ?: "Surah ${message.surah}"
+                val surahName = surahs.firstOrNull { it.number == selection.surah }?.englishName
+                    ?: "Surah ${selection.surah}"
                 DailyReminderHero(
-                    headline = message.english,
-                    sourceLabel = "$surahName · ${message.surah}:${message.verse}",
-                    lang = lang
+                    headline = headline,
+                    sourceLabel = "$surahName · ${selection.surah}:${selection.verse}",
                 ) {
-                    navController.navigate(Routes.surah(message.surah, message.verse))
+                    navController.navigate(Routes.surah(selection.surah, selection.verse))
                 }
             }
         }
 
         // Continue reading
         item {
-            ContinueReadingSection(surahs = surahs, lang = lang, navController = navController)
+            ContinueReadingSection(surahs = surahs, navController = navController)
         }
 
         // Bookmark spotlight (hidden with no bookmarks)
         val latestBookmark = BookmarkManager.bookmarks.maxByOrNull { it.createdAt }
         if (latestBookmark != null) {
             item {
-                BookmarkSpotlight(bookmark = latestBookmark, lang = lang, navController = navController)
+                BookmarkSpotlight(bookmark = latestBookmark, navController = navController)
             }
         }
 
@@ -216,10 +222,9 @@ fun TodayScreen(navController: NavHostController) {
             item {
                 DailyFeatureCard(
                     icon = { EmIconChip(icon = Icons.Filled.Psychology, size = 46.dp) },
-                    title = DailyChallengeStrings.dailyChallenge(lang),
-                    subLine = challengeSubLine(lang),
+                    title = DailyChallengeStrings.dailyChallenge,
+                    subLine = challengeSubLine(),
                     done = DailyChallengeManager.isCompletedToday,
-                    lang = lang
                 ) { navController.navigate(Routes.CHALLENGE) }
             }
         }
@@ -229,10 +234,9 @@ fun TodayScreen(navController: NavHostController) {
             item {
                 DailyFeatureCard(
                     icon = { EmIconChip(icon = Icons.Filled.GridOn, size = 46.dp) },
-                    title = DailyCrosswordStrings.dailyCrossword(lang),
-                    subLine = crosswordSubLine(lang),
+                    title = DailyCrosswordStrings.dailyCrossword,
+                    subLine = crosswordSubLine(),
                     done = DailyCrosswordManager.isCompletedToday,
-                    lang = lang
                 ) { navController.navigate(Routes.CROSSWORD) }
             }
         }
@@ -241,72 +245,71 @@ fun TodayScreen(navController: NavHostController) {
         val dua = DuasManager.duaOfTheDay()
         if (dua != null) {
             item {
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    EmCard(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pressableGentle { navController.navigate("dua/${dua.id}") }
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            EmIconChip(icon = Icons.Filled.FormatQuote, size = 40.dp)
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = TodayStrings.duaOfTheDay(lang).uppercase(),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = if (lang.isRTL) 0.sp else 1.5.sp,
-                                    color = colors.accentColor
-                                )
-                                Text(
-                                    text = dua.situation(lang),
-                                    fontFamily = CormorantFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 18.sp,
-                                    color = colors.primaryText,
-                                    maxLines = 2
-                                )
-                                Text(
-                                    text = dua.category.replaceFirstChar { it.uppercase() },
-                                    fontSize = 11.sp,
-                                    color = colors.tertiaryText
-                                )
-                            }
-                            Icon(
-                                Icons.Filled.ChevronRight,
-                                contentDescription = null,
-                                tint = colors.tertiaryText,
-                                modifier = Modifier.size(16.dp)
+                EmCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .pressableGentle { navController.navigate("dua/${dua.id}") }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        EmIconChip(icon = Icons.Filled.FormatQuote, size = 40.dp)
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = TodayStrings.duaOfTheDay.uppercase(),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.5.sp,
+                                color = colors.accentColor
+                            )
+                            Text(
+                                text = dua.situation,
+                                fontFamily = CormorantFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 18.sp,
+                                color = colors.primaryText,
+                                maxLines = 2
+                            )
+                            Text(
+                                text = dua.category.replaceFirstChar { it.uppercase() },
+                                fontSize = 11.sp,
+                                color = colors.tertiaryText
                             )
                         }
+                        Icon(
+                            Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            tint = colors.tertiaryText,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
+
             }
         }
     }
 }
 
 @Composable
-private fun challengeSubLine(lang: CommentaryLanguage): String {
+private fun challengeSubLine(): String {
     val manager = DailyChallengeManager
     val format = DailyChallengeProvider.today?.format ?: return ""
     return if (manager.isCompletedToday) {
-        "${DailyChallengeStrings.doneForToday(lang).uppercase()} · 🔥 ${manager.streak.currentStreak}"
+        "${DailyChallengeStrings.doneForToday.uppercase()} · 🔥 ${manager.streak.currentStreak}"
     } else {
-        val teaser = DailyChallengeStrings.teaser(format, lang).uppercase()
+        val teaser = DailyChallengeStrings.teaser(format).uppercase()
         if (manager.streak.currentStreak > 0) "🔥 ${manager.streak.currentStreak} · $teaser" else teaser
     }
 }
 
 @Composable
-private fun crosswordSubLine(lang: CommentaryLanguage): String {
+private fun crosswordSubLine(): String {
     val manager = DailyCrosswordManager
     return if (manager.isCompletedToday) {
-        "${DailyCrosswordStrings.doneForToday(lang).uppercase()} · 🔥 ${manager.streak.currentStreak}"
+        "${DailyCrosswordStrings.doneForToday.uppercase()} · 🔥 ${manager.streak.currentStreak}"
     } else {
-        val teaser = DailyCrosswordStrings.teaser(lang).uppercase()
+        val teaser = DailyCrosswordStrings.teaser.uppercase()
         if (manager.streak.currentStreak > 0) "🔥 ${manager.streak.currentStreak} · $teaser" else teaser
     }
 }
@@ -354,13 +357,12 @@ private fun seasonalHeroRes(): Int {
 private fun DailyReminderHero(
     headline: String,
     sourceLabel: String,
-    lang: CommentaryLanguage,
     onTap: () -> Unit
 ) {
     if (Theme.colors.isMidnightEmerald) {
-        SeasonalReminderHero(headline, sourceLabel, lang, onTap)
+        SeasonalReminderHero(headline, sourceLabel, onTap)
     } else {
-        GoldReminderHero(headline, sourceLabel, lang, onTap)
+        GoldReminderHero(headline, sourceLabel, onTap)
     }
 }
 
@@ -371,19 +373,16 @@ private val HeroBase = Color(0xFF06110D)
 private fun SeasonalReminderHero(
     headline: String,
     sourceLabel: String,
-    lang: CommentaryLanguage,
     onTap: () -> Unit
 ) {
     val colors = Theme.colors
     val context = androidx.compose.ui.platform.LocalContext.current
     val shape = RoundedCornerShape(22.dp)
-    val isRtl = lang.isRTL
-
     // Horizontal legibility scrim: darkens the text side, leaves the warm
     // focal glow on the far side. Reversed for RTL, where the text sits at
     // the right edge (the art is mirrored instead - see below).
     val sideScrim =
-        if (isRtl) Brush.horizontalGradient(
+        if (false) Brush.horizontalGradient(
             0.16f to Color.Transparent,
             0.36f to Color.Black.copy(alpha = 0.16f),
             0.62f to Color.Black.copy(alpha = 0.60f),
@@ -430,58 +429,55 @@ private fun SeasonalReminderHero(
                 .matchParentSize()
                 // RTL: mirror the ART so its dark side stays under the text;
                 // scrims and text follow layout direction as normal.
-                .graphicsLayer { if (isRtl) scaleX = -1f }
+                .graphicsLayer { if (false) scaleX = -1f }
         )
         Box(modifier = Modifier.matchParentSize().background(sideScrim))
         Box(modifier = Modifier.matchParentSize().background(bottomScrim))
 
-        CompositionLocalProvider(
-            LocalLayoutDirection provides if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(
-                        Icons.Filled.AutoAwesome,
-                        contentDescription = null,
-                        tint = colors.accentBright,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Text(
-                        text = TodayStrings.reminderEyebrow(lang).uppercase(),
-                        fontSize = if (isRtl) 13.sp else 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = if (isRtl) 0.sp else 1.3.sp,
-                        color = colors.accentBright
-                    )
-                }
-                Text(
-                    text = "“$headline”",
-                    fontFamily = if (lang == CommentaryLanguage.URDU) AmiriFamily else CormorantFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = if (lang == CommentaryLanguage.URDU) 22.sp else 24.sp,
-                    lineHeight = if (lang == CommentaryLanguage.URDU) 34.sp else 30.sp,
-                    color = colors.primaryText,
-                    style = androidx.compose.ui.text.TextStyle(
-                        shadow = androidx.compose.ui.graphics.Shadow(
-                            color = Color.Black.copy(alpha = 0.55f),
-                            offset = androidx.compose.ui.geometry.Offset(0f, 1f),
-                            blurRadius = 10f
-                        )
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(
+                    Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = colors.accentBright,
+                    modifier = Modifier.size(13.dp)
                 )
                 Text(
-                    text = sourceLabel,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.primaryText.copy(alpha = 0.72f)
+                    text = TodayStrings.reminderEyebrow.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.3.sp,
+                    color = colors.accentBright
                 )
             }
+            Text(
+                text = "“$headline”",
+                fontFamily = CormorantFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 24.sp,
+                lineHeight = 30.sp,
+                color = colors.primaryText,
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color.Black.copy(alpha = 0.55f),
+                        offset = androidx.compose.ui.geometry.Offset(0f, 1f),
+                        blurRadius = 10f
+                    )
+                )
+            )
+            Text(
+                text = sourceLabel,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.primaryText.copy(alpha = 0.72f)
+            )
         }
+
     }
 }
 
@@ -490,7 +486,6 @@ private fun SeasonalReminderHero(
 private fun GoldReminderHero(
     headline: String,
     sourceLabel: String,
-    lang: CommentaryLanguage,
     onTap: () -> Unit
 ) {
     val colors = Theme.colors
@@ -521,68 +516,73 @@ private fun GoldReminderHero(
                 .background(colors.onAccentText.copy(alpha = 0.08f))
         )
 
-        CompositionLocalProvider(
-            LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(
-                        Icons.Filled.AutoAwesome,
-                        contentDescription = null,
-                        tint = colors.onAccentText.copy(alpha = 0.75f),
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Text(
-                        text = TodayStrings.reminderEyebrow(lang).uppercase(),
-                        fontSize = if (lang.isRTL) 13.sp else 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = if (lang.isRTL) 0.sp else 1.3.sp,
-                        color = colors.onAccentText.copy(alpha = 0.75f)
-                    )
-                }
-                Text(
-                    text = "“$headline”",
-                    fontFamily = CormorantFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 24.sp,
-                    lineHeight = 30.sp,
-                    color = colors.onAccentText
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(
+                    Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = colors.onAccentText.copy(alpha = 0.75f),
+                    modifier = Modifier.size(13.dp)
                 )
                 Text(
-                    text = sourceLabel,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.onAccentText.copy(alpha = 0.7f)
+                    text = TodayStrings.reminderEyebrow.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.3.sp,
+                    color = colors.onAccentText.copy(alpha = 0.75f)
                 )
             }
+            Text(
+                text = "“$headline”",
+                fontFamily = CormorantFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 24.sp,
+                lineHeight = 30.sp,
+                color = colors.onAccentText
+            )
+            Text(
+                text = sourceLabel,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.onAccentText.copy(alpha = 0.7f)
+            )
         }
+
     }
 }
 
 @Composable
 private fun ContinueReadingSection(
     surahs: List<Surah>,
-    lang: CommentaryLanguage,
     navController: NavHostController
 ) {
     val colors = Theme.colors
     val info = ProgressManager.lastReadInfo
     val surah = info?.let { i -> surahs.firstOrNull { it.number == i.surahNumber } }
+    // Load that surah's passages so the card can name the passage the reader is in.
+    LaunchedEffect(info?.surahNumber) { info?.surahNumber?.let { PassageStore.load(it) } }
+    // "<title> · passage i of n"; the verse line until the passage index has loaded.
+    // The no-break space keeps the dot with the title when the line wraps.
+    val positionLine = info?.let { i ->
+        val index = i.passageIndex
+        val title = i.passageTitle
+        if (index != null && title != null && i.passagesTotal > 0) "$title\u00A0· passage $index of ${i.passagesTotal}" else null
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            text = TodayStrings.continueReading(lang).uppercase(),
+            text = TodayStrings.continueReading.uppercase(),
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
-            letterSpacing = if (lang.isRTL) 0.sp else 2.sp,
+            letterSpacing = 2.sp,
             color = colors.accentColor,
             modifier = Modifier.fillMaxWidth(),
-            textAlign = if (lang.isRTL) TextAlign.End else TextAlign.Start
+            textAlign = TextAlign.Start
         )
         EmCard(glow = true, modifier = Modifier.fillMaxWidth()) {
             if (info != null && surah != null) {
@@ -603,10 +603,10 @@ private fun ContinueReadingSection(
                                 color = colors.primaryText
                             )
                             Text(
-                                text = TodayStrings.verseOf(info.verseNumber, surah.versesCount, lang),
+                                text = positionLine ?: TodayStrings.verseOf(info.verseNumber, surah.versesCount),
                                 fontSize = 12.sp,
                                 color = colors.tertiaryText,
-                                maxLines = 1
+                                maxLines = 2
                             )
                         }
                         Text(
@@ -636,7 +636,9 @@ private fun ContinueReadingSection(
                                 )
                             }
                             Text(
-                                text = TodayStrings.percentComplete((info.progress * 100).toInt(), lang),
+                                // "3 of 24 passages read", or the verse percentage until the index loads.
+                                text = if (info.passagesTotal > 0) "${info.passagesRead} of ${info.passagesTotal} passages read"
+                                else TodayStrings.percentComplete((info.progress * 100).toInt()),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = colors.tertiaryText
@@ -653,7 +655,7 @@ private fun ContinueReadingSection(
                         ) {
                             Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = colors.onAccentText, modifier = Modifier.size(14.dp))
                             Text(
-                                text = TodayStrings.resume(lang),
+                                text = TodayStrings.resume,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = colors.onAccentText
@@ -669,15 +671,15 @@ private fun ContinueReadingSection(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = TodayStrings.startJourney(lang),
+                        text = TodayStrings.startJourney,
                         fontFamily = CormorantFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 22.sp,
                         color = colors.primaryText
                     )
-                    Text(text = TodayStrings.openFatiha(lang), fontSize = 13.sp, color = colors.secondaryText)
+                    Text(text = TodayStrings.openFatiha, fontSize = 13.sp, color = colors.secondaryText)
                     com.thaqalayn.app.ui.components.EmGoldCTA(
-                        title = TodayStrings.begin(lang),
+                        title = TodayStrings.begin,
                         icon = Icons.Filled.PlayArrow
                     ) { navController.navigate(Routes.surah(1, 1)) }
                 }
@@ -690,7 +692,6 @@ private fun ContinueReadingSection(
 @Composable
 private fun BookmarkSpotlight(
     bookmark: com.thaqalayn.app.model.Bookmark,
-    lang: CommentaryLanguage,
     navController: NavHostController
 ) {
     val colors = Theme.colors
@@ -699,13 +700,13 @@ private fun BookmarkSpotlight(
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            text = BookmarkSpotlightStrings.eyebrow(lang).uppercase(),
+            text = BookmarkSpotlightStrings.eyebrow.uppercase(),
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
-            letterSpacing = if (lang.isRTL) 0.sp else 2.sp,
+            letterSpacing = 2.sp,
             color = colors.accentColor,
             modifier = Modifier.fillMaxWidth(),
-            textAlign = if (lang.isRTL) TextAlign.End else TextAlign.Start
+            textAlign = TextAlign.Start
         )
         EmCard(modifier = Modifier.fillMaxWidth()) {
             Column {
@@ -721,7 +722,7 @@ private fun BookmarkSpotlight(
                     Row(verticalAlignment = Alignment.Top) {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.weight(1f)) {
                             Text(
-                                text = bookmark.verseReference,
+                                text = bookmark.referenceLabel,
                                 fontFamily = CormorantFamily,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 24.sp,
@@ -735,38 +736,46 @@ private fun BookmarkSpotlight(
                                 color = colors.secondaryText
                             )
                         }
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(RoundedCornerShape(11.dp))
-                                .background(colors.accentGradient),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Favorite, contentDescription = null, tint = colors.onAccentText, modifier = Modifier.size(15.dp))
-                        }
+                        BookmarkKindBadge(isPassage = bookmark.isPassage)
                     }
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    if (bookmark.isPassage) {
+                        // A passage is identified by its title, not its first verse's Arabic.
                         Text(
-                            text = bookmark.verseText,
-                            fontFamily = AmiriFamily,
-                            fontSize = (21 * scale).sp,
-                            lineHeight = (21 * scale * 1.5f).sp,
+                            text = translation,
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp,
                             color = colors.primaryText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth()
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        bookmark.passageMetaLabel?.let {
+                            Text(text = it, fontSize = 12.5.sp, fontWeight = FontWeight.Medium, color = colors.tertiaryText)
+                        }
+                    } else {
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                            Text(
+                                text = bookmark.verseText,
+                                fontFamily = AmiriFamily,
+                                fontSize = (21 * scale).sp,
+                                lineHeight = (21 * scale * 1.5f).sp,
+                                color = colors.primaryText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Text(
+                            text = "“$translation”",
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = (16 * scale).sp,
+                            lineHeight = (16 * scale * 1.3f).sp,
+                            color = colors.secondaryText,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Text(
-                        text = "“$translation”",
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = (16 * scale).sp,
-                        lineHeight = (16 * scale * 1.3f).sp,
-                        color = colors.secondaryText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
                 EmDivider(modifier = Modifier.padding(horizontal = 17.dp))
                 Row(
@@ -777,7 +786,7 @@ private fun BookmarkSpotlight(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = BookmarkSpotlightStrings.allBookmarks(BookmarkManager.bookmarks.size, lang),
+                        text = BookmarkSpotlightStrings.allBookmarks(BookmarkManager.bookmarks.size),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.accentColor,
@@ -797,45 +806,40 @@ private fun DailyFeatureCard(
     title: String,
     subLine: String,
     done: Boolean,
-    lang: CommentaryLanguage,
     onOpen: () -> Unit
 ) {
     val colors = Theme.colors
-    CompositionLocalProvider(
-        LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-    ) {
-        EmCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .let { if (done) it else it.pressableGentle(onClick = onOpen) }
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                icon()
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 20.sp,
-                        color = colors.primaryText,
-                        maxLines = 2
-                    )
-                    Text(
-                        text = subLine,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = if (lang.isRTL) 0.sp else 1.sp,
-                        color = if (done) colors.semanticGreen else colors.accentColor
-                    )
-                }
-                if (done) {
-                    Icon(Icons.Filled.CheckCircle, contentDescription = "Done", tint = colors.semanticGreen, modifier = Modifier.size(16.dp))
-                } else {
-                    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = colors.tertiaryText, modifier = Modifier.size(15.dp))
-                }
+    EmCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .let { if (done) it else it.pressableGentle(onClick = onOpen) }
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            icon()
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                    color = colors.primaryText,
+                    maxLines = 2
+                )
+                Text(
+                    text = subLine,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    color = if (done) colors.semanticGreen else colors.accentColor
+                )
+            }
+            if (done) {
+                Icon(Icons.Filled.CheckCircle, contentDescription = "Done", tint = colors.semanticGreen, modifier = Modifier.size(16.dp))
+            } else {
+                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = colors.tertiaryText, modifier = Modifier.size(15.dp))
             }
         }
     }

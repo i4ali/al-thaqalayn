@@ -49,12 +49,10 @@ import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.data.DuasManager
 import com.thaqalayn.app.data.LifeMomentsManager
 import com.thaqalayn.app.model.AudioPlayerState
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.DailyDua
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.Verse
 import com.thaqalayn.app.model.VerseWithTafsir
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
@@ -71,7 +69,6 @@ import com.thaqalayn.app.ui.theme.Theme
 @Composable
 fun LifeMomentDetailScreen(momentId: String, navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
     val moment = remember(momentId) { LifeMomentsManager.byId(momentId) } ?: return
     val linkedDua = remember(moment.duaId) { moment.duaId?.let { DuasManager.byId(it) } }
@@ -115,10 +112,10 @@ fun LifeMomentDetailScreen(momentId: String, navController: NavHostController) {
                 )
             }
 
-            Hero(moment.category, moment.situation(lang), lang)
-            VerseSection(moment.surahNumber, moment.verseNumber, loaded, lang, scale, navController)
+            Hero(moment.category, moment.situation)
+            VerseSection(moment.surahNumber, moment.verseNumber, loaded, scale, navController)
             if (linkedDua != null) {
-                DuaSection(linkedDua, lang, scale) {
+                DuaSection(linkedDua, scale) {
                     navController.navigate(Routes.dua(linkedDua.id))
                 }
             }
@@ -128,7 +125,7 @@ fun LifeMomentDetailScreen(momentId: String, navController: NavHostController) {
 
 // Hero - category icon chip + the situation + a category pill.
 @Composable
-private fun Hero(category: String, situation: String, lang: CommentaryLanguage) {
+private fun Hero(category: String, situation: String) {
     val colors = Theme.colors
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -152,20 +149,16 @@ private fun Hero(category: String, situation: String, lang: CommentaryLanguage) 
             )
         }
 
-        CompositionLocalProvider(
-            LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-        ) {
-            Text(
-                text = situation,
-                fontFamily = CormorantFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 30.sp,
-                lineHeight = 36.sp,
-                color = colors.primaryText,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
+        Text(
+            text = situation,
+            fontFamily = CormorantFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 30.sp,
+            lineHeight = 36.sp,
+            color = colors.primaryText,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Box(
             modifier = Modifier
@@ -191,7 +184,6 @@ private fun VerseSection(
     surahNumber: Int,
     verseNumber: Int,
     loaded: Pair<Surah, Verse>?,
-    lang: CommentaryLanguage,
     scale: Float,
     navController: NavHostController
 ) {
@@ -265,22 +257,16 @@ private fun VerseSection(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                ) {
-                    val translation =
-                        if (lang == CommentaryLanguage.URDU) verse.translationUrdu ?: verse.translation
-                        else verse.translation
-                    Text(
-                        text = translation,
-                        fontFamily = if (lang == CommentaryLanguage.URDU) AmiriFamily else CormorantFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = (16 * scale).sp,
-                        lineHeight = (16 * scale * 1.5f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                                Text(
+                    text = verse.translation,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = (16 * scale).sp,
+                    lineHeight = (16 * scale * 1.5f).sp,
+                    color = colors.secondaryText,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
             } else {
                 Text(
                     text = "Tap to open this verse in the reader.",
@@ -294,7 +280,7 @@ private fun VerseSection(
 
 // The linked supplication - the whole card taps through to the full dua detail.
 @Composable
-private fun DuaSection(dua: DailyDua, lang: CommentaryLanguage, scale: Float, onClick: () -> Unit) {
+private fun DuaSection(dua: DailyDua, scale: Float, onClick: () -> Unit) {
     val colors = Theme.colors
     val shape = RoundedCornerShape(20.dp)
     Column(
@@ -328,7 +314,7 @@ private fun DuaSection(dua: DailyDua, lang: CommentaryLanguage, scale: Float, on
         }
 
         Text(
-            text = dua.situation(lang),
+            text = dua.situation,
             fontFamily = CormorantFamily,
             fontWeight = FontWeight.SemiBold,
             fontSize = 20.sp,

@@ -64,7 +64,13 @@ object AudioManager {
     fun init(context: Context) {
         appContext = context.applicationContext
         prefs = context.getSharedPreferences("thaqalayn_audio", Context.MODE_PRIVATE)
-        selectedReciter = Reciter.byId(prefs.getString(RECITER_KEY, null))
+        val savedReciterId = prefs.getString(RECITER_KEY, null)
+        selectedReciter = Reciter.byId(savedReciterId)
+        // A reciter removed in an update (Alafasy, iOS 7849856) may still be saved;
+        // persist the fallback so the removed id is never read again.
+        if (savedReciterId != null && savedReciterId != selectedReciter.id) {
+            prefs.edit().putString(RECITER_KEY, selectedReciter.id).apply()
+        }
 
         val exo = ExoPlayer.Builder(context.applicationContext).build()
         exo.addListener(object : Player.Listener {

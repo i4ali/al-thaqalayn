@@ -20,14 +20,11 @@ data class AhlulBaytNarration(
     val sourceAr: String,
     val sourceUr: String
 ) {
-    fun translation(language: CommentaryLanguage): String =
-        if (language == CommentaryLanguage.URDU) translationUr else translationEn
+    val translation: String
+        get() = translationEn
 
-    fun source(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> sourceAr
-        CommentaryLanguage.URDU -> sourceUr
-        else -> sourceEn
-    }
+    val source: String
+        get() = sourceEn
 }
 
 // MARK: - Life Moments
@@ -49,11 +46,8 @@ data class LifeMoment(
 ) {
     val verseReference: String get() = "Quran $surahNumber:$verseNumber"
 
-    fun situation(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> situationAr
-        CommentaryLanguage.URDU -> situationUr
-        else -> situationEn
-    }
+    val situation: String
+        get() = situationEn
 }
 
 // MARK: - Foods of the Quran
@@ -84,29 +78,17 @@ data class Food(
 ) {
     val verseReference: String get() = "Quran $surahNumber:$verseNumber"
 
-    fun name(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> nameAr
-        CommentaryLanguage.URDU -> nameUr
-        else -> nameEn
-    }
+    val name: String
+        get() = nameEn
 
-    fun narration(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> narrationAr
-        CommentaryLanguage.URDU -> narrationUr
-        else -> narrationEn
-    }
+    val narration: String
+        get() = narrationEn
 
-    fun sunnahTip(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> sunnahTipAr
-        CommentaryLanguage.URDU -> sunnahTipUr
-        else -> sunnahTipEn
-    }
+    val sunnahTip: String
+        get() = sunnahTipEn
 
-    fun nutritionNote(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> nutritionNoteAr
-        CommentaryLanguage.URDU -> nutritionNoteUr
-        else -> nutritionNoteEn
-    }
+    val nutritionNote: String
+        get() = nutritionNoteEn
 }
 
 // MARK: - Prophetic Stories
@@ -145,11 +127,8 @@ data class StoryVerse(
 ) {
     val verseReference: String get() = "Quran $surahNumber:$verseNumber"
 
-    fun storyNote(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> storyNoteAr
-        CommentaryLanguage.URDU -> storyNoteUr
-        else -> storyNoteEn
-    }
+    val storyNote: String
+        get() = storyNoteEn
 }
 
 @Serializable
@@ -174,29 +153,17 @@ data class PropheticStory(
     val verseCount: Int get() = verses.size
     val keyVerses: List<StoryVerse> get() = verses.filter { it.isKeyVerse }
 
-    fun title(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> titleAr
-        CommentaryLanguage.URDU -> titleUr
-        else -> titleEn
-    }
+    val title: String
+        get() = titleEn
 
-    fun shortTitle(language: CommentaryLanguage): String? = when (language) {
-        CommentaryLanguage.ARABIC -> shortTitleAr
-        CommentaryLanguage.URDU -> shortTitleUr
-        else -> shortTitleEn
-    }
+    val shortTitle: String?
+        get() = shortTitleEn
 
-    fun prophet(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> prophetAr
-        CommentaryLanguage.URDU -> prophetUr
-        else -> prophetEn
-    }
+    val prophet: String
+        get() = prophetEn
 
-    fun lessonsSummary(language: CommentaryLanguage): String? = when (language) {
-        CommentaryLanguage.ARABIC -> lessonsSummaryAr
-        CommentaryLanguage.URDU -> lessonsSummaryUr
-        else -> lessonsSummaryEn
-    }
+    val lessonsSummary: String?
+        get() = lessonsSummaryEn
 }
 
 // MARK: - Prophetic Parallels
@@ -234,11 +201,8 @@ data class ParallelVerse(
 ) {
     val verseReference: String get() = "Quran $surahNumber:$verseNumber"
 
-    fun relevanceNote(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> relevanceNoteAr
-        CommentaryLanguage.URDU -> relevanceNoteUr
-        else -> relevanceNoteEn
-    }
+    val relevanceNote: String
+        get() = relevanceNoteEn
 }
 
 @Serializable
@@ -266,35 +230,20 @@ data class PropheticParallel(
     val icon: String,
     val narration: AhlulBaytNarration? = null
 ) {
-    fun situation(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> situationAr
-        CommentaryLanguage.URDU -> situationUr
-        else -> situationEn
-    }
+    val situation: String
+        get() = situationEn
 
-    fun prophet(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> prophetAr
-        CommentaryLanguage.URDU -> prophetUr
-        else -> prophetEn
-    }
+    val prophet: String
+        get() = prophetEn
 
-    fun connection(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> connectionAr
-        CommentaryLanguage.URDU -> connectionUr
-        else -> connectionEn
-    }
+    val connection: String
+        get() = connectionEn
 
-    fun comfortMessage(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> comfortMessageAr
-        CommentaryLanguage.URDU -> comfortMessageUr
-        else -> comfortMessageEn
-    }
+    val comfortMessage: String
+        get() = comfortMessageEn
 
-    fun storySummary(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> storySummaryAr
-        CommentaryLanguage.URDU -> storySummaryUr
-        else -> storySummaryEn
-    }
+    val storySummary: String
+        get() = storySummaryEn
 }
 
 // MARK: - Ahl al-Bayt in the Quran
@@ -333,11 +282,8 @@ data class AhlulbaytVerse(
 ) {
     val verseReference: String get() = "Quran $surahNumber:$verseNumber"
 
-    fun context(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> contextAr
-        CommentaryLanguage.URDU -> contextUr
-        else -> contextEn
-    }
+    val context: String
+        get() = contextEn
 }
 
 @Serializable
@@ -362,29 +308,17 @@ data class AhlulbaytEntry(
     val verseCount: Int get() = verses.size
     val primaryVerses: List<AhlulbaytVerse> get() = verses.filter { it.isPrimary }
 
-    fun title(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> titleAr
-        CommentaryLanguage.URDU -> titleUr
-        else -> titleEn
-    }
+    val title: String
+        get() = titleEn
 
-    fun shortTitle(language: CommentaryLanguage): String? = when (language) {
-        CommentaryLanguage.ARABIC -> shortTitleAr
-        CommentaryLanguage.URDU -> shortTitleUr
-        else -> shortTitleEn
-    }
+    val shortTitle: String?
+        get() = shortTitleEn
 
-    fun ahlulbaytMembers(language: CommentaryLanguage): List<String> = when (language) {
-        CommentaryLanguage.ARABIC -> ahlulbaytMembersAr
-        CommentaryLanguage.URDU -> ahlulbaytMembersUr
-        else -> ahlulbaytMembersEn
-    }
+    val ahlulbaytMembers: List<String>
+        get() = ahlulbaytMembersEn
 
-    fun revelationContext(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> revelationContextAr
-        CommentaryLanguage.URDU -> revelationContextUr
-        else -> revelationContextEn
-    }
+    val revelationContext: String
+        get() = revelationContextEn
 }
 
 // MARK: - Fasting in the Quran
@@ -407,17 +341,11 @@ data class FastingCategory(
 ) {
     val verseCount: Int get() = verses.size
 
-    fun title(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> titleAr
-        CommentaryLanguage.URDU -> titleUr
-        else -> titleEn
-    }
+    val title: String
+        get() = titleEn
 
-    fun description(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> descriptionAr
-        CommentaryLanguage.URDU -> descriptionUr
-        else -> descriptionEn
-    }
+    val description: String
+        get() = descriptionEn
 }
 
 @Serializable
@@ -432,9 +360,6 @@ data class FastingVerse(
 ) {
     val verseReference: String get() = "Quran $surahNumber:$verseNumber"
 
-    fun relevanceNote(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> relevanceNoteAr
-        CommentaryLanguage.URDU -> relevanceNoteUr
-        else -> relevanceNoteEn
-    }
+    val relevanceNote: String
+        get() = relevanceNoteEn
 }

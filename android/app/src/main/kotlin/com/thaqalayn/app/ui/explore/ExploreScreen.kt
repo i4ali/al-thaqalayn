@@ -26,19 +26,14 @@ import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.thaqalayn.app.model.CommentaryLanguage
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.R
 import com.thaqalayn.app.ui.components.CoverHeaderBand
@@ -63,17 +58,11 @@ private data class ExploreItem(
     val subtitleUr: String,
     val route: String
 ) {
-    fun title(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> titleAr
-        CommentaryLanguage.URDU -> titleUr
-        else -> titleEn
-    }
+    val title: String
+        get() = titleEn
 
-    fun subtitle(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> subtitleAr
-        CommentaryLanguage.URDU -> subtitleUr
-        else -> subtitleEn
-    }
+    val subtitle: String
+        get() = subtitleEn
 }
 
 private class ExploreSection(
@@ -82,11 +71,8 @@ private class ExploreSection(
     val titleUr: String,
     val items: List<ExploreItem>
 ) {
-    fun title(language: CommentaryLanguage): String = when (language) {
-        CommentaryLanguage.ARABIC -> titleAr
-        CommentaryLanguage.URDU -> titleUr
-        else -> titleEn
-    }
+    val title: String
+        get() = titleEn
 }
 
 private val exploreSections = listOf(
@@ -194,23 +180,11 @@ private val exploreSections = listOf(
     )
 )
 
-private fun eyebrow(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "اكتشف"
-    CommentaryLanguage.URDU -> "دریافت"
-    else -> "Discover"
-}
+private val eyebrow = "Discover"
 
-private fun title(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "استكشف"
-    CommentaryLanguage.URDU -> "تلاش کریں"
-    else -> "Explore"
-}
+private val title = "Explore"
 
-private fun subtitle(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "تأمّل حكمة القرآن الكريم"
-    CommentaryLanguage.URDU -> "قرآنی حکمت پر غور کریں"
-    else -> "Discover Quranic Wisdom"
-}
+private val subtitle = "Discover Quranic Wisdom"
 
 // MARK: - View (iOS EmeraldExploreView)
 
@@ -218,50 +192,45 @@ private fun subtitle(language: CommentaryLanguage): String = when (language) {
 @Composable
 fun ExploreScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
     // Cover art is Midnight Emerald only; the standard theme keeps the plain header.
     val hasCover = colors.isMidnightEmerald
 
-    CompositionLocalProvider(LocalLayoutDirection provides direction) {
-        // No statusBarsPadding on the list itself: the header band bleeds
-        // behind the status bar and scrolls off with the content.
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(22.dp),
-            contentPadding = PaddingValues(bottom = 120.dp)
-        ) {
-            item {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    if (hasCover) {
-                        CoverHeaderBand(art = R.drawable.explore_cover, height = 440.dp)
-                    }
-                    EmHeading(
-                        eyebrow = eyebrow(lang),
-                        title = title(lang),
-                        sub = subtitle(lang),
-                        modifier = Modifier
-                            .statusBarsPadding()
-                            .padding(horizontal = 20.dp)
-                            .padding(top = if (hasCover) 62.dp else 16.dp)
-                    )
+    // No statusBarsPadding on the list itself: the header band bleeds
+    // behind the status bar and scrolls off with the content.
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(22.dp),
+        contentPadding = PaddingValues(bottom = 120.dp)
+    ) {
+        item {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                if (hasCover) {
+                    CoverHeaderBand(art = R.drawable.explore_cover, height = 440.dp)
                 }
+                EmHeading(
+                    eyebrow = eyebrow,
+                    title = title,
+                    sub = subtitle,
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(horizontal = 20.dp)
+                        .padding(top = if (hasCover) 62.dp else 16.dp)
+                )
             }
+        }
 
-            exploreSections.forEach { section ->
-                item {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    ) {
-                        EmDivider(label = section.title(lang))
-                        section.items.forEach { rowItem ->
-                            ExploreRow(
-                                item = rowItem,
-                                lang = lang,
-                                onClick = { navController.navigate(rowItem.route) }
-                            )
-                        }
+        exploreSections.forEach { section ->
+            item {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                ) {
+                    EmDivider(label = section.title)
+                    section.items.forEach { rowItem ->
+                        ExploreRow(
+                            item = rowItem,
+                            onClick = { navController.navigate(rowItem.route) }
+                        )
                     }
                 }
             }
@@ -270,7 +239,7 @@ fun ExploreScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun ExploreRow(item: ExploreItem, lang: CommentaryLanguage, onClick: () -> Unit) {
+private fun ExploreRow(item: ExploreItem, onClick: () -> Unit) {
     val colors = Theme.colors
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -287,14 +256,14 @@ private fun ExploreRow(item: ExploreItem, lang: CommentaryLanguage, onClick: () 
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = item.title(lang),
+                    text = item.title,
                     fontFamily = CormorantFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 19.sp,
                     color = colors.primaryText
                 )
                 Text(
-                    text = item.subtitle(lang),
+                    text = item.subtitle,
                     fontSize = 12.5.sp,
                     color = colors.tertiaryText,
                     maxLines = 1,

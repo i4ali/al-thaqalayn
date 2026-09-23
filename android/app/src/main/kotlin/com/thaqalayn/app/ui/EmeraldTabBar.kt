@@ -23,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.components.pressable
 import com.thaqalayn.app.ui.theme.Theme
 
@@ -49,8 +48,7 @@ fun EmeraldTabBar(
     val selectedColor = if (isEmerald) colors.accentBright else colors.accentColor
     val inactiveColor = if (isEmerald) colors.tertiaryText else colors.secondaryText
     val cardTint = if (isEmerald) Color(0xFF0A1512).copy(alpha = 0.94f) else Color.White.copy(alpha = 0.92f)
-    val isRTL = CommentaryLanguageManager.selectedLanguage.isRTL
-    val labelSize = if (isRTL) 12.sp else 10.sp
+    val labelSize = 10.sp
     val shape = RoundedCornerShape(22.dp)
 
     Row(

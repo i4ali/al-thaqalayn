@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import com.thaqalayn.app.model.BadgeAward
 import com.thaqalayn.app.model.BadgeType
 import com.thaqalayn.app.model.LastReadInfo
+import com.thaqalayn.app.model.PassageRef
 import com.thaqalayn.app.model.ProgressPreferences
 import com.thaqalayn.app.model.ProgressStats
 import com.thaqalayn.app.model.ReadingStreak
@@ -89,6 +90,11 @@ object ProgressManager {
             .apply()
     }
 
+    /** Stats alone; the full save also encodes every verse record, too much while scrolling. */
+    private fun saveStats() {
+        prefs.edit().putString(STATS_KEY, json.encodeToString(stats)).apply()
+    }
+
     // MARK: - Preferences
 
     fun updatePreferences(newPreferences: ProgressPreferences) {
@@ -104,40 +110,56 @@ object ProgressManager {
 
     fun markVerseAsRead(surahNumber: Int, verseNumber: Int): Boolean {
         if (surahNumber !in 1..114) return false
+        recordVerseRead(surahNumber, verseNumber)
+        finishMarkingRead(surahNumber)
+        return true
+    }
+
+    /**
+     * Upserts one verse as read (refreshing its read date) and awards its 10 sawab
+     * when it was not read before. Touches no totals, streak, badges, persistence
+     * or reminders; the caller runs [finishMarkingRead] once after one or many verses.
+     */
+    private fun recordVerseRead(surahNumber: Int, verseNumber: Int): Boolean {
         val verseKey = "$surahNumber:$verseNumber"
         val now = System.currentTimeMillis()
-
-        var isNewRead = false
         val existing = verseProgress.indexOfFirst { it.verseKey == verseKey }
-        verseProgress = if (existing >= 0) {
-            verseProgress.toMutableList().also {
+        if (existing >= 0) {
+            verseProgress = verseProgress.toMutableList().also {
                 it[existing] = it[existing].copy(readDate = now, isRead = true)
             }
-        } else {
-            isNewRead = true
-            verseProgress + VerseProgress(
-                id = UUID.randomUUID().toString(),
-                surahNumber = surahNumber,
-                verseNumber = verseNumber,
-                readDate = now
-            )
+            return false
         }
+        verseProgress = verseProgress + VerseProgress(
+            id = UUID.randomUUID().toString(),
+            surahNumber = surahNumber,
+            verseNumber = verseNumber,
+            readDate = now
+        )
+        // 10 sawab per newly read verse, based on hadith
+        stats = stats.copy(totalSawab = stats.totalSawab + 10)
+        return true
+    }
 
-        var newStats = stats.copy(
+    /**
+     * Everything that follows one or more verses of [surahNumber] being recorded
+     * read: totals, streak, surah completion and badges, save, reminders. Runs once
+     * per marking, not once per verse (iOS finishMarkingRead).
+     */
+    private fun finishMarkingRead(surahNumber: Int) {
+        val now = System.currentTimeMillis()
+        stats = stats.copy(
             totalVersesRead = verseProgress.count { it.isRead },
             versesReadToday = versesReadToday(now),
             lastReadDate = now
         )
-        // 10 sawab per newly read verse, based on hadith
-        if (isNewRead) newStats = newStats.copy(totalSawab = newStats.totalSawab + 10)
-        stats = newStats
-
         updateStreak(now)
+        // Surah completion count, then any badge the completion earns.
+        recomputeSurahsCompleted()
         checkSurahCompletion(surahNumber)
         saveProgress()
         // Re-arm engagement notifications now that progress changed.
         updateEngagementNotifications(surahNumber)
-        return true
     }
 
     fun unmarkVerseAsRead(surahNumber: Int, verseNumber: Int): Boolean {
@@ -150,12 +172,116 @@ object ProgressManager {
             versesReadToday = versesReadToday(System.currentTimeMillis()),
             totalSawab = maxOf(0, stats.totalSawab - 10)
         )
+        recomputeSurahsCompleted()
         saveProgress()
         return true
     }
 
     fun isVerseRead(surahNumber: Int, verseNumber: Int): Boolean =
         verseProgress.any { it.verseKey == "$surahNumber:$verseNumber" && it.isRead }
+
+    // MARK: - Passage progress (iOS 8.6)
+
+    private var readKeysSource: List<VerseProgress>? = null
+    private var readKeysCache: Set<String> = emptySet()
+
+    /**
+     * Keys "surah:verse" of every verse marked read. Cached per progress list, so
+     * a screen can read it on every recomposition without rebuilding the set.
+     */
+    val readVerseKeys: Set<String>
+        get() {
+            val source = verseProgress
+            if (source !== readKeysSource) {
+                readKeysCache = source.asSequence().filter { it.isRead }.map { it.verseKey }.toHashSet()
+                readKeysSource = source
+            }
+            return readKeysCache
+        }
+
+    fun isPassageRead(ref: PassageRef): Boolean = PassageProgress.isRead(ref, readVerseKeys)
+
+    /**
+     * Marks every verse in a passage read, once. Each new verse still earns its 10
+     * sawab, but the streak, badge check, save and reminder re-arm run once for the
+     * whole passage. Verses already read are left untouched.
+     */
+    fun markPassageRead(ref: PassageRef) {
+        if (ref.surah !in 1..114) return
+        val unread = ref.verses.filter { !isVerseRead(ref.surah, it) }
+        if (unread.isEmpty()) return
+
+        for (verse in unread) recordVerseRead(ref.surah, verse)
+        finishMarkingRead(ref.surah)
+
+        // Finishing the passage the reader is in moves Continue Reading on to the
+        // next one. A passage marked while the reader is elsewhere leaves it alone.
+        if (isPositionInside(ref)) {
+            DataManager.shared.passageIndex?.next(ref)?.let {
+                updateReadingPosition(it.surah, it.start)
+            }
+        }
+    }
+
+    /**
+     * The reverse of [markPassageRead]: drops every read verse in the passage and
+     * takes back its sawab. The streak and earned badges stay, as they do for a
+     * single verse; the surah completion count is recomputed.
+     */
+    fun unmarkPassageRead(ref: PassageRef) {
+        if (ref.surah !in 1..114) return
+        val keys = ref.verses.map { "${ref.surah}:$it" }.toSet()
+        val before = verseProgress.size
+        verseProgress = verseProgress.filterNot { it.verseKey in keys }
+        val removed = before - verseProgress.size
+        if (removed == 0) return
+
+        stats = stats.copy(
+            totalVersesRead = verseProgress.count { it.isRead },
+            versesReadToday = versesReadToday(System.currentTimeMillis()),
+            totalSawab = maxOf(0, stats.totalSawab - 10 * removed)
+        )
+        recomputeSurahsCompleted()
+        saveProgress()
+    }
+
+    // MARK: - Reading position
+
+    /**
+     * Records where the reader is: [verseNumber] is the verse at the top of the
+     * passage screen. Saves the stats alone, so it is cheap while scrolling.
+     */
+    fun updateReadingPosition(surahNumber: Int, verseNumber: Int) {
+        if (surahNumber !in 1..114 || verseNumber <= 0) return
+        if (stats.lastReadSurah != surahNumber || stats.lastReadVerse != verseNumber) {
+            stats = stats.copy(
+                lastReadSurah = surahNumber,
+                lastReadVerse = verseNumber,
+                lastReadDate = System.currentTimeMillis()
+            )
+            saveStats()
+        }
+    }
+
+    /** Opening a passage puts the position at its first verse, unless the reader is already inside it. */
+    fun enterPassage(ref: PassageRef) {
+        if (isPositionInside(ref)) return
+        updateReadingPosition(ref.surah, ref.start)
+    }
+
+    /**
+     * Leaving a passage records the verse at the top of the screen, unless the
+     * position has already moved on (the passage was just marked read).
+     */
+    fun leavePassage(ref: PassageRef, topVerse: Int) {
+        if (!isPositionInside(ref)) return
+        updateReadingPosition(ref.surah, topVerse)
+    }
+
+    private fun isPositionInside(ref: PassageRef): Boolean {
+        val verse = stats.lastReadVerse ?: return false
+        return stats.lastReadSurah == ref.surah && verse in ref.start..ref.end
+    }
 
     fun addSawab(amount: Int, reason: String) {
         if (amount <= 0) return
@@ -176,6 +302,20 @@ object ProgressManager {
         return total > 0 && read == total
     }
 
+    /**
+     * [ProgressStats.totalSurahsCompleted] is the number of surahs whose every verse
+     * is read right now, derived on every mark and unmark so the Progress rings
+     * follow unmarking too. Badges stay as a record of what was earned.
+     */
+    private fun recomputeSurahsCompleted() {
+        val readBySurah = verseProgress.filter { it.isRead }.groupingBy { it.surahNumber }.eachCount()
+        val completed = readBySurah.count { (surahNumber, read) ->
+            val total = surahsByNumber[surahNumber]?.versesCount ?: 0
+            total > 0 && read >= total
+        }
+        stats = stats.copy(totalSurahsCompleted = completed)
+    }
+
     private fun checkSurahCompletion(surahNumber: Int) {
         if (!isSurahCompleted(surahNumber)) return
         val alreadyAwarded = badges.any {
@@ -193,10 +333,7 @@ object ProgressManager {
             badgeType = BadgeType.SURAH_COMPLETION
         )
         badges = badges + badge
-        stats = stats.copy(
-            totalSurahsCompleted = stats.totalSurahsCompleted + 1,
-            totalSawab = stats.totalSawab + badge.badgeType.sawabValue
-        )
+        stats = stats.copy(totalSawab = stats.totalSawab + badge.badgeType.sawabValue)
         if (preferences.celebrationsEnabled) pendingBadge = badge
         notifyBadgeAwarded(badge)
         checkMilestoneBadges()
@@ -402,16 +539,49 @@ object ProgressManager {
 
     // MARK: - Last read
 
-    /** Most recent read verse, with completion progress for its surah. Null for new users. */
+    /**
+     * Where Continue Reading points: the recorded reading position, or, for
+     * progress saved before positions existed, the most recently read verse. Null
+     * for new users. Progress is passages read in that surah; verses read stand in
+     * until the passage index has loaded.
+     */
     val lastReadInfo: LastReadInfo?
         get() {
-            val latest = verseProgress.filter { it.isRead }.maxByOrNull { it.readDate } ?: return null
-            val (read, total) = getSurahCompletion(latest.surahNumber)
-            return LastReadInfo(
-                surahNumber = latest.surahNumber,
-                verseNumber = latest.verseNumber,
-                progress = if (total > 0) read.toDouble() / total else 0.0,
+            val surahNumber: Int
+            val verseNumber: Int
+            val updatedAt: Long
+            val positionSurah = stats.lastReadSurah
+            val positionVerse = stats.lastReadVerse
+            if (positionSurah != null && positionVerse != null) {
+                surahNumber = positionSurah
+                verseNumber = positionVerse
+                updatedAt = stats.lastReadDate ?: System.currentTimeMillis()
+            } else {
+                val latest = verseProgress.filter { it.isRead }.maxByOrNull { it.readDate } ?: return null
+                surahNumber = latest.surahNumber
+                verseNumber = latest.verseNumber
                 updatedAt = latest.readDate
+            }
+
+            val index = DataManager.shared.passageIndex
+            val passages = index?.passages(surahNumber).orEmpty()
+            val ref = index?.passageContaining(surahNumber, verseNumber)
+            val passagesRead = PassageProgress.readCount(passages, readVerseKeys)
+            val progress = if (passages.isEmpty()) {
+                val (read, total) = getSurahCompletion(surahNumber)
+                if (total > 0) read.toDouble() / total else 0.0
+            } else {
+                passagesRead.toDouble() / passages.size
+            }
+            return LastReadInfo(
+                surahNumber = surahNumber,
+                verseNumber = verseNumber,
+                passageIndex = ref?.index,
+                passageTitle = ref?.let { PassageStore.title(it) },
+                passagesRead = passagesRead,
+                passagesTotal = passages.size,
+                progress = progress,
+                updatedAt = updatedAt
             )
         }
 

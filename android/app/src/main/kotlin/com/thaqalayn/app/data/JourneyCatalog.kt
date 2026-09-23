@@ -1,6 +1,5 @@
 package com.thaqalayn.app.data
 
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.strings.JourneyStrings
 
 /**
@@ -57,20 +56,19 @@ data class JourneyDescriptor(
         if (isActive()) return JourneyStatus.Active(statusLine())
 
         val cal = IslamicCalendarManager
-        val lang = CommentaryLanguageManager.selectedLanguage
         val year = cal.currentIslamicYear()
         val thisYearStart = cal.hijriDateMillis(year, contentStartMonth, 1)
         val now = System.currentTimeMillis()
         if (now < thisYearStart) {
             return JourneyStatus.ComingSoon(
                 daysUntil = cal.daysFromNow(thisYearStart),
-                startsLabel = JourneyStrings.begins(cal.mediumDateLabel(thisYearStart), lang)
+                startsLabel = JourneyStrings.begins(cal.mediumDateLabel(thisYearStart))
             )
         }
         val nextYearStart = cal.hijriDateMillis(year + 1, contentStartMonth, 1)
         return JourneyStatus.Ended(
             daysUntil = cal.daysFromNow(nextYearStart),
-            returnsLabel = JourneyStrings.returns(cal.mediumDateLabel(nextYearStart), lang)
+            returnsLabel = JourneyStrings.returns(cal.mediumDateLabel(nextYearStart))
         )
     }
 
@@ -97,7 +95,6 @@ data class JourneyDescriptor(
                 statusLine = { IslamicCalendarManager.fatimiyyaSeasonStatus() },
                 statusOverride = {
                     val cal = IslamicCalendarManager
-                    val lang = CommentaryLanguageManager.selectedLanguage
                     if (cal.isFatimiyyaSeason()) {
                         JourneyStatus.Active(cal.fatimiyyaSeasonStatus())
                     } else {
@@ -108,17 +105,17 @@ data class JourneyDescriptor(
                         when {
                             now < firstStart -> JourneyStatus.ComingSoon(
                                 cal.daysFromNow(firstStart),
-                                JourneyStrings.firstFatimiyya(cal.mediumDateLabel(firstStart), lang)
+                                JourneyStrings.firstFatimiyya(cal.mediumDateLabel(firstStart))
                             )
                             now < secondStart -> JourneyStatus.ComingSoon(
                                 cal.daysFromNow(secondStart),
-                                JourneyStrings.secondFatimiyya(cal.mediumDateLabel(secondStart), lang)
+                                JourneyStrings.secondFatimiyya(cal.mediumDateLabel(secondStart))
                             )
                             else -> {
                                 val nextReturn = cal.hijriDateMillis(year + 1, 5, 8)
                                 JourneyStatus.Ended(
                                     cal.daysFromNow(nextReturn),
-                                    JourneyStrings.returns(cal.mediumDateLabel(nextReturn), lang)
+                                    JourneyStrings.returns(cal.mediumDateLabel(nextReturn))
                                 )
                             }
                         }
@@ -131,7 +128,6 @@ data class JourneyDescriptor(
                 statusLine = { IslamicCalendarManager.arbaeenSeasonStatus() },
                 statusOverride = {
                     val cal = IslamicCalendarManager
-                    val lang = CommentaryLanguageManager.selectedLanguage
                     if (cal.isArbaeenSeason()) {
                         JourneyStatus.Active(cal.arbaeenSeasonStatus())
                     } else {
@@ -142,13 +138,13 @@ data class JourneyDescriptor(
                         if (now < windowStart) {
                             JourneyStatus.ComingSoon(
                                 cal.daysFromNow(windowStart),
-                                JourneyStrings.begins(cal.mediumDateLabel(windowStart), lang)
+                                JourneyStrings.begins(cal.mediumDateLabel(windowStart))
                             )
                         } else {
                             val nextStart = cal.hijriDateMillis(year + 1, 1, 11)
                             JourneyStatus.Ended(
                                 cal.daysFromNow(nextStart),
-                                JourneyStrings.returns(cal.mediumDateLabel(nextStart), lang)
+                                JourneyStrings.returns(cal.mediumDateLabel(nextStart))
                             )
                         }
                     }

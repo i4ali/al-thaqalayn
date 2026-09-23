@@ -15,6 +15,9 @@ val AmiriFamily = FontFamily(
 /** Cormorant Garamond: the app's display/reading serif ("EmType.serif" on iOS). */
 val CormorantFamily = FontFamily(
     Font(R.font.cormorant_garamond_medium, FontWeight.Medium),
-    Font(R.font.cormorant_garamond_medium_italic, FontWeight.Medium, FontStyle.Italic),
-    Font(R.font.cormorant_garamond_semibold, FontWeight.SemiBold)
+    Font(R.font.cormorant_garamond_semibold, FontWeight.SemiBold),
+    // Every italic is the SemiBold Italic face, as on iOS 9.0 (EmType.serifItalic): the
+    // Medium Italic was unreadable in cream and secondary grey on the dark grounds.
+    Font(R.font.cormorant_garamond_semibold_italic, FontWeight.Medium, FontStyle.Italic),
+    Font(R.font.cormorant_garamond_semibold_italic, FontWeight.SemiBold, FontStyle.Italic)
 )

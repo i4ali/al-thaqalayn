@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -35,22 +36,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.Icon
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.R
 import com.thaqalayn.app.data.DataManager
+import com.thaqalayn.app.data.PassageProgress
+import com.thaqalayn.app.data.PassageStore
 import com.thaqalayn.app.data.ProgressManager
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.LastReadInfo
 import com.thaqalayn.app.model.Surah
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmDivider
@@ -68,7 +66,6 @@ import com.thaqalayn.app.ui.theme.Theme
 @Composable
 fun HomeScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     var searchText by rememberSaveable { mutableStateOf("") }
 
     val surahs by produceState(initialValue = emptyList<Surah>()) {
@@ -85,7 +82,6 @@ fun HomeScreen(navController: NavHostController) {
     }
 
     val isEmerald = colors.isMidnightEmerald
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         // Greeting row: bookmarks + notifications entry points
@@ -129,6 +125,10 @@ fun HomeScreen(navController: NavHostController) {
             }
         }
 
+        // Load the Continue Reading surah's passages so the card can name its passage.
+        val lastReadSurah = ProgressManager.lastReadInfo?.surahNumber
+        LaunchedEffect(lastReadSurah) { lastReadSurah?.let { PassageStore.load(it) } }
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -137,21 +137,20 @@ fun HomeScreen(navController: NavHostController) {
             )
         ) {
             item {
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    if (isEmerald) {
-                        EmHeading(
-                            eyebrow = QuranTabStrings.nobleQuranEyebrow(lang),
-                            title = QuranTabStrings.readAndReflect(lang)
-                        )
-                    } else {
-                        Text(
-                            text = QuranTabStrings.holyQuran(lang),
-                            fontSize = 34.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.primaryText
-                        )
-                    }
+                if (isEmerald) {
+                    EmHeading(
+                        eyebrow = QuranTabStrings.nobleQuranEyebrow,
+                        title = QuranTabStrings.readAndReflect
+                    )
+                } else {
+                    Text(
+                        text = QuranTabStrings.holyQuran,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.primaryText
+                    )
                 }
+
             }
 
             val lastRead = ProgressManager.lastReadInfo
@@ -159,33 +158,30 @@ fun HomeScreen(navController: NavHostController) {
                 val surah = surahs.firstOrNull { it.number == lastRead.surahNumber }
                 if (surah != null) {
                     item {
-                        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                            ContinueReadingCard(info = lastRead, surah = surah, lang = lang) {
-                                navController.navigate(Routes.surah(surah.number, lastRead.verseNumber))
-                            }
+                        ContinueReadingCard(info = lastRead, surah = surah) {
+                            navController.navigate(Routes.surah(surah.number, lastRead.verseNumber))
                         }
+
                     }
                 }
             }
 
             item {
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    SearchField(
-                        value = searchText,
-                        onValueChange = { searchText = it },
-                        placeholder = QuranTabStrings.searchPlaceholder(lang)
-                    )
-                }
+                SearchField(
+                    value = searchText,
+                    onValueChange = { searchText = it },
+                    placeholder = QuranTabStrings.searchPlaceholder
+                )
+
             }
 
             if (searchText.isBlank()) {
                 item {
-                    EmDivider(label = QuranTabStrings.surahsCount(surahs.size, lang))
+                    EmDivider(label = QuranTabStrings.surahsCount(surahs.size))
                 }
                 items(filtered, key = { it.number }) { surah ->
                     SurahListRow(
                         surah = surah,
-                        lang = lang,
                         onOpenSurah = { navController.navigate(Routes.surah(surah.number)) },
                         onOpenExperience = { navController.navigate(Routes.surahExperience(it)) },
                         onShowPaywall = { navController.navigate(Routes.paywall()) }
@@ -195,7 +191,6 @@ fun HomeScreen(navController: NavHostController) {
                 item {
                     SearchResults(
                         query = searchText,
-                        lang = lang,
                         onOpenSurah = { navController.navigate(Routes.surah(it)) },
                         onOpenVerse = { s, v -> navController.navigate(Routes.surah(s, v)) },
                         onOpenExperience = { navController.navigate(Routes.surahExperience(it)) },
@@ -246,7 +241,6 @@ private fun SearchField(
 private fun ContinueReadingCard(
     info: LastReadInfo,
     surah: Surah,
-    lang: CommentaryLanguage,
     onResume: () -> Unit
 ) {
     val colors = Theme.colors
@@ -264,10 +258,10 @@ private fun ContinueReadingCard(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = QuranTabStrings.continueReading(lang).uppercase(),
+                    text = QuranTabStrings.continueReading.uppercase(),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = if (lang.isRTL) 0.sp else 2.sp,
+                    letterSpacing = 2.sp,
                     color = colors.accentColor
                 )
                 Text(
@@ -277,9 +271,16 @@ private fun ContinueReadingCard(
                     fontSize = 27.sp,
                     color = colors.primaryText
                 )
+                // "<passage title> · 3 of 24 passages read"; the verse line stands in
+                // until the passage index has loaded.
+                val title = info.passageTitle
                 Text(
-                    text = "${QuranTabStrings.verseOf(info.verseNumber, surah.versesCount, lang)} · " +
-                        QuranTabStrings.percentComplete((info.progress * 100).toInt(), lang),
+                    text = if (title != null && info.passagesTotal > 0) {
+                        "$title · ${QuranTabStrings.passagesReadOf(info.passagesRead, info.passagesTotal)}"
+                    } else {
+                        "${QuranTabStrings.verseOf(info.verseNumber, surah.versesCount)} · " +
+                            QuranTabStrings.percentComplete((info.progress * 100).toInt())
+                    },
                     fontSize = 13.sp,
                     color = colors.secondaryText
                 )
@@ -317,7 +318,7 @@ private fun ContinueReadingCard(
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = QuranTabStrings.resume(lang),
+                        text = QuranTabStrings.resume,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.3.sp,
@@ -337,7 +338,6 @@ private fun ContinueReadingCard(
 @Composable
 fun SurahCard(
     surah: Surah,
-    lang: CommentaryLanguage,
     squaredBottom: Boolean = false,
     showsBorder: Boolean = true,
     onClick: () -> Unit
@@ -349,8 +349,11 @@ fun SurahCard(
     } else {
         RoundedCornerShape(20.dp)
     }
-    val (read, total) = ProgressManager.getSurahCompletion(surah.number)
-    val percentage = if (total > 0) (read * 100) / total else 0
+    // Passage count and progress, in place of the old verse percentage (iOS 8.6).
+    val passages = DataManager.shared.passageIndex?.passages(surah.number).orEmpty()
+    val totalCount = passages.size
+    val readCount = PassageProgress.readCount(passages, ProgressManager.readVerseKeys)
+    val isComplete = totalCount > 0 && readCount == totalCount
 
     Row(
         modifier = Modifier
@@ -424,27 +427,34 @@ fun SurahCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = QuranTabStrings.versesCount(surah.versesCount, lang),
+                    text = QuranTabStrings.versesCount(surah.versesCount),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = colors.tertiaryText
                 )
                 Text(text = "·", color = colors.tertiaryText, fontSize = 12.sp)
                 Text(
-                    text = QuranTabStrings.revelation(surah.revelationType, lang),
+                    text = QuranTabStrings.revelation(surah.revelationType),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = colors.tertiaryText
                 )
-                if (read > 0) {
-                    Text(text = "·", color = colors.tertiaryText, fontSize = 12.sp)
-                    Text(
-                        text = "$percentage%",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isEmerald) colors.accentColor else colors.semanticGreen
-                    )
-                }
+            }
+            // Its own line: "3 of 40 passages" does not fit beside the verse count
+            // and revelation type on narrow phones. "40 passages" until one is read.
+            if (totalCount > 0) {
+                Text(
+                    text = if (readCount > 0) QuranTabStrings.passagesRead(readCount, totalCount)
+                    else QuranTabStrings.passagesCount(totalCount),
+                    fontSize = 12.sp,
+                    fontWeight = if (readCount > 0) FontWeight.SemiBold else FontWeight.Medium,
+                    color = when {
+                        readCount == 0 -> colors.tertiaryText
+                        isEmerald -> colors.accentColor
+                        isComplete -> Color(0xFFE8A04F)
+                        else -> colors.semanticGreen
+                    }
+                )
             }
         }
     }

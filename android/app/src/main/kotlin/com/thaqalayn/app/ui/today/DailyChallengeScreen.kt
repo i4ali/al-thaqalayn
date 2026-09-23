@@ -56,7 +56,6 @@ import com.thaqalayn.app.data.DailyChallengeManager
 import com.thaqalayn.app.data.DailyChallengeProvider
 import com.thaqalayn.app.model.DailyChallenge
 import com.thaqalayn.app.model.DailyChallengeFormat
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmGoldCTA
@@ -72,7 +71,6 @@ import com.thaqalayn.app.ui.theme.Theme
 @Composable
 fun DailyChallengeScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
     val challenge = DailyChallengeProvider.today ?: return
 
@@ -95,7 +93,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
         ThemedBackground()
 
         if (showCompletion) {
-            CompletionLayer(lang = lang) { navController.popBackStack() }
+            CompletionLayer() { navController.popBackStack() }
         } else {
             Column(
                 modifier = Modifier
@@ -108,26 +106,23 @@ fun DailyChallengeScreen(navController: NavHostController) {
             ) {
                 // Header: eyebrow + topic + close
                 Row(verticalAlignment = Alignment.Top) {
-                    CompositionLocalProvider(
-                        LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = DailyChallengeStrings.dailyChallenge(lang).uppercase(),
-                                fontSize = if (lang.isRTL) 13.sp else 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = if (lang.isRTL) 0.sp else 1.5.sp,
-                                color = colors.accentColor
-                            )
-                            Text(
-                                text = challenge.topic.replaceFirstChar { it.uppercase() },
-                                fontFamily = CormorantFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 24.sp,
-                                color = colors.primaryText
-                            )
-                        }
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = DailyChallengeStrings.dailyChallenge.uppercase(),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp,
+                            color = colors.accentColor
+                        )
+                        Text(
+                            text = challenge.topic.replaceFirstChar { it.uppercase() },
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 24.sp,
+                            color = colors.primaryText
+                        )
                     }
+
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -143,19 +138,18 @@ fun DailyChallengeScreen(navController: NavHostController) {
                 // Format body
                 when (challenge.format) {
                     DailyChallengeFormat.multipleChoice, DailyChallengeFormat.fillInBlank -> {
-                        PromptCard(challenge.prompt.text(lang), scale, lang)
+                        PromptCard(challenge.prompt.en, scale)
                         if (challenge.format == DailyChallengeFormat.fillInBlank && challenge.arabicText != null) {
                             ArabicCard(challenge.arabicText, scale)
                         }
-                        challenge.source?.let { SourceLine(it, lang) }
+                        challenge.source?.let { SourceLine(it) }
                         challenge.options?.forEachIndexed { index, option ->
                             OptionRow(
-                                text = option.text(lang),
+                                text = option.en,
                                 index = index,
                                 selectedIndex = selectedIndex,
                                 correctIndex = challenge.correctIndex,
                                 revealed = revealed,
-                                lang = lang,
                                 scale = scale
                             ) {
                                 if (!revealed) {
@@ -166,11 +160,11 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         }
                     }
                     DailyChallengeFormat.trueFalse -> {
-                        PromptCard(challenge.prompt.text(lang), scale, lang)
-                        challenge.source?.let { SourceLine(it, lang) }
+                        PromptCard(challenge.prompt.en, scale)
+                        challenge.source?.let { SourceLine(it) }
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             TrueFalseButton(
-                                label = DailyChallengeStrings.trueLabel(lang),
+                                label = DailyChallengeStrings.trueLabel,
                                 answer = true,
                                 challenge = challenge,
                                 selectedIndex = selectedIndex,
@@ -178,7 +172,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                                 modifier = Modifier.weight(1f)
                             ) { selectedIndex = 1; revealed = true }
                             TrueFalseButton(
-                                label = DailyChallengeStrings.falseLabel(lang),
+                                label = DailyChallengeStrings.falseLabel,
                                 answer = false,
                                 challenge = challenge,
                                 selectedIndex = selectedIndex,
@@ -191,14 +185,13 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         FlashcardBody(
                             challenge = challenge,
                             flipped = flipped,
-                            lang = lang,
                             scale = scale,
                             onFlip = { flipped = true }
                         )
                         if (flipped && flashcardGotIt == null) {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 FlashcardGradeButton(
-                                    label = DailyChallengeStrings.reviewAgain(lang),
+                                    label = DailyChallengeStrings.reviewAgain,
                                     icon = Icons.Filled.Refresh,
                                     gotIt = false,
                                     modifier = Modifier.weight(1f)
@@ -208,7 +201,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                                     showCompletion = true
                                 }
                                 FlashcardGradeButton(
-                                    label = DailyChallengeStrings.gotIt(lang),
+                                    label = DailyChallengeStrings.gotIt,
                                     icon = Icons.Filled.ThumbUp,
                                     gotIt = true,
                                     modifier = Modifier.weight(1f)
@@ -219,7 +212,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                                 }
                             }
                         }
-                        challenge.source?.let { SourceLine(it, lang) }
+                        challenge.source?.let { SourceLine(it) }
                     }
                 }
 
@@ -240,7 +233,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = if (wasCorrect) DailyChallengeStrings.correct(lang) else DailyChallengeStrings.notQuite(lang),
+                            text = if (wasCorrect) DailyChallengeStrings.correct else DailyChallengeStrings.notQuite,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = if (wasCorrect) colors.semanticGreen else colors.accentColor
@@ -248,27 +241,24 @@ fun DailyChallengeScreen(navController: NavHostController) {
                     }
                     challenge.explanation?.let { explanation ->
                         EmCard(modifier = Modifier.fillMaxWidth()) {
-                            CompositionLocalProvider(
-                                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                            ) {
-                                Text(
-                                    text = explanation.text(lang),
-                                    fontFamily = if (lang.isRTL) AmiriFamily else CormorantFamily,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = (16 * scale).sp,
-                                    lineHeight = (16 * scale * 1.5f).sp,
-                                    color = colors.primaryText,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(18.dp)
-                                )
-                            }
+                            Text(
+                                text = explanation.en,
+                                fontFamily = CormorantFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = (16 * scale).sp,
+                                lineHeight = (16 * scale * 1.5f).sp,
+                                color = colors.primaryText,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(18.dp)
+                            )
+
                         }
                     }
                     if (challenge.format != DailyChallengeFormat.fillInBlank && challenge.arabicText != null) {
                         ArabicCard(challenge.arabicText, scale)
                     }
-                    EmGoldCTA(title = DailyChallengeStrings.doneButton(lang)) { triggerCompletion() }
+                    EmGoldCTA(title = DailyChallengeStrings.doneButton) { triggerCompletion() }
                 }
             }
         }
@@ -276,24 +266,21 @@ fun DailyChallengeScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun PromptCard(text: String, scale: Float, lang: com.thaqalayn.app.model.CommentaryLanguage) {
+private fun PromptCard(text: String, scale: Float) {
     val colors = Theme.colors
     EmCard(modifier = Modifier.fillMaxWidth()) {
-        CompositionLocalProvider(
-            LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-        ) {
-            Text(
-                text = text,
-                fontFamily = if (lang.isRTL) AmiriFamily else CormorantFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = (18 * scale).sp,
-                lineHeight = (18 * scale * 1.45f).sp,
-                color = colors.primaryText,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
-            )
-        }
+        Text(
+            text = text,
+            fontFamily = CormorantFamily,
+            fontWeight = FontWeight.Medium,
+            fontSize = (18 * scale).sp,
+            lineHeight = (18 * scale * 1.45f).sp,
+            color = colors.primaryText,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        )
+
     }
 }
 
@@ -318,13 +305,13 @@ private fun ArabicCard(arabic: String, scale: Float) {
 }
 
 @Composable
-private fun SourceLine(source: String, lang: com.thaqalayn.app.model.CommentaryLanguage) {
+private fun SourceLine(source: String) {
     Text(
         text = source,
         fontSize = 12.sp,
         fontWeight = FontWeight.Medium,
         color = Theme.colors.tertiaryText,
-        textAlign = if (lang.isRTL) TextAlign.End else TextAlign.Start,
+        textAlign = TextAlign.Start,
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -336,7 +323,6 @@ private fun OptionRow(
     selectedIndex: Int?,
     correctIndex: Int?,
     revealed: Boolean,
-    lang: com.thaqalayn.app.model.CommentaryLanguage,
     scale: Float,
     onSelect: () -> Unit
 ) {
@@ -394,19 +380,16 @@ private fun OptionRow(
                 color = bubbleText
             )
         }
-        CompositionLocalProvider(
-            LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-        ) {
-            Text(
-                text = text,
-                fontFamily = if (lang.isRTL) AmiriFamily else CormorantFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = (16 * scale).sp,
-                lineHeight = (16 * scale * 1.4f).sp,
-                color = if (isWrong) colors.secondaryText else colors.primaryText,
-                modifier = Modifier.weight(1f)
-            )
-        }
+        Text(
+            text = text,
+            fontFamily = CormorantFamily,
+            fontWeight = FontWeight.Medium,
+            fontSize = (16 * scale).sp,
+            lineHeight = (16 * scale * 1.4f).sp,
+            color = if (isWrong) colors.secondaryText else colors.primaryText,
+            modifier = Modifier.weight(1f)
+        )
+
         if (revealed && (isCorrect || isWrong)) {
             Icon(
                 if (isCorrect) Icons.Filled.CheckCircle else Icons.Filled.Cancel,
@@ -487,7 +470,6 @@ private fun TrueFalseButton(
 private fun FlashcardBody(
     challenge: DailyChallenge,
     flipped: Boolean,
-    lang: com.thaqalayn.app.model.CommentaryLanguage,
     scale: Float,
     onFlip: () -> Unit
 ) {
@@ -530,24 +512,21 @@ private fun FlashcardBody(
                             )
                         }
                     }
-                    CompositionLocalProvider(
-                        LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                    ) {
-                        Text(
-                            text = challenge.prompt.text(lang),
-                            fontFamily = if (lang.isRTL) AmiriFamily else CormorantFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = (17 * scale).sp,
-                            lineHeight = (17 * scale * 1.45f).sp,
-                            color = colors.primaryText,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
                     Text(
-                        text = DailyChallengeStrings.flipCard(lang).uppercase(),
+                        text = challenge.prompt.en,
+                        fontFamily = CormorantFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = (17 * scale).sp,
+                        lineHeight = (17 * scale * 1.45f).sp,
+                        color = colors.primaryText,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text(
+                        text = DailyChallengeStrings.flipCard.uppercase(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = if (lang.isRTL) 0.sp else 1.2.sp,
+                        letterSpacing = 1.2.sp,
                         color = colors.accentColor,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
@@ -565,41 +544,38 @@ private fun FlashcardBody(
                         .padding(22.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
                 ) {
-                    CompositionLocalProvider(
-                        LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            challenge.answer?.let { answer ->
-                                Text(
-                                    text = answer.text(lang),
-                                    fontFamily = if (lang.isRTL) AmiriFamily else CormorantFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = (18 * scale).sp,
-                                    lineHeight = (18 * scale * 1.4f).sp,
-                                    color = colors.accentBright,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                            challenge.explanation?.let { explanation ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 2.dp)
-                                        .background(colors.strokeColor)
-                                        .size(1.dp)
-                                )
-                                Text(
-                                    text = explanation.text(lang),
-                                    fontFamily = if (lang.isRTL) AmiriFamily else CormorantFamily,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = (15 * scale).sp,
-                                    lineHeight = (15 * scale * 1.45f).sp,
-                                    color = colors.secondaryText,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        challenge.answer?.let { answer ->
+                            Text(
+                                text = answer.en,
+                                fontFamily = CormorantFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = (18 * scale).sp,
+                                lineHeight = (18 * scale * 1.4f).sp,
+                                color = colors.accentBright,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        challenge.explanation?.let { explanation ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp)
+                                    .background(colors.strokeColor)
+                                    .size(1.dp)
+                            )
+                            Text(
+                                text = explanation.en,
+                                fontFamily = CormorantFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = (15 * scale).sp,
+                                lineHeight = (15 * scale * 1.45f).sp,
+                                color = colors.secondaryText,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
+
                 }
             }
         }
@@ -644,7 +620,7 @@ private fun FlashcardGradeButton(
 }
 
 @Composable
-private fun CompletionLayer(lang: com.thaqalayn.app.model.CommentaryLanguage, onDone: () -> Unit) {
+private fun CompletionLayer(onDone: () -> Unit) {
     val colors = Theme.colors
     AnimatedVisibility(visible = true, enter = fadeIn() + scaleIn(initialScale = 0.95f) + slideInVertically()) {}
     Column(
@@ -666,7 +642,7 @@ private fun CompletionLayer(lang: com.thaqalayn.app.model.CommentaryLanguage, on
         }
         Spacer(modifier = Modifier.size(14.dp))
         Text(
-            text = DailyChallengeStrings.completionTitle(lang),
+            text = DailyChallengeStrings.completionTitle,
             fontFamily = CormorantFamily,
             fontWeight = FontWeight.SemiBold,
             fontSize = 28.sp,
@@ -684,14 +660,14 @@ private fun CompletionLayer(lang: com.thaqalayn.app.model.CommentaryLanguage, on
         ) {
             Text(text = "🔥", fontSize = 14.sp)
             Text(
-                text = DailyChallengeStrings.streakLabel(DailyChallengeManager.streak.currentStreak, lang),
+                text = DailyChallengeStrings.streakLabel(DailyChallengeManager.streak.currentStreak),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.secondaryText
             )
         }
         Spacer(modifier = Modifier.weight(1f))
-        EmGoldCTA(title = DailyChallengeStrings.doneForToday(lang), icon = Icons.Filled.Check) { onDone() }
+        EmGoldCTA(title = DailyChallengeStrings.doneForToday, icon = Icons.Filled.Check) { onDone() }
         Spacer(modifier = Modifier.size(32.dp))
     }
 }

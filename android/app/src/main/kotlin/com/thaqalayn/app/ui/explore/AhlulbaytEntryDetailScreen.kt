@@ -51,11 +51,9 @@ import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.model.AhlulbaytEntry
 import com.thaqalayn.app.model.AhlulbaytVerse
 import com.thaqalayn.app.model.AudioPlayerState
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.Verse
 import com.thaqalayn.app.model.VerseWithTafsir
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
@@ -69,23 +67,17 @@ import com.thaqalayn.app.ui.theme.AmiriFamily
 import com.thaqalayn.app.ui.theme.CormorantFamily
 import com.thaqalayn.app.ui.theme.Theme
 
-private fun screenEyebrow(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "أهل البيت في القرآن"
-    CommentaryLanguage.URDU -> "قرآن میں اہلِ بیت"
-    else -> "Ahl al-Bayt in the Quran"
-}
+private val screenEyebrow = "Ahl al-Bayt in the Quran"
 
 /** Ahl al-Bayt entry detail: header, members, verses with context, revelation context, related entries (iOS AhlulbaytEntryDetailView). */
 @Composable
 fun AhlulbaytEntryDetailScreen(entryId: String, navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
     val entry = remember(entryId) { AhlulbaytQuranManager.byId(entryId) } ?: return
     val relatedEntries = remember(entry) {
         entry.relatedEntries.mapNotNull { AhlulbaytQuranManager.byId(it) }
     }
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
@@ -117,60 +109,59 @@ fun AhlulbaytEntryDetailScreen(entryId: String, navController: NavHostController
 
             // Header card
             EmCard(modifier = Modifier.fillMaxWidth()) {
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    Column(
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                            .clip(CircleShape)
+                            .background(colors.accentChip)
+                            .border(1.dp, colors.strokeColor, CircleShape)
+                            .padding(horizontal = 13.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(colors.accentChip)
-                                .border(1.dp, colors.strokeColor, CircleShape)
-                                .padding(horizontal = 13.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(7.dp)
-                        ) {
-                            Icon(
-                                ahlulbaytCategoryIcon(entry.category),
-                                contentDescription = null,
-                                tint = colors.accentColor,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Text(
-                                text = entry.category.displayName,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.accentColor
-                            )
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                            Text(
-                                text = screenEyebrow(lang).uppercase(),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = if (lang.isRTL) 0.sp else 3.sp,
-                                color = colors.accentColor
-                            )
-                            Text(
-                                text = entry.title(lang),
-                                fontFamily = CormorantFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 30.sp,
-                                lineHeight = 36.sp,
-                                color = colors.primaryText
-                            )
-                        }
+                        Icon(
+                            ahlulbaytCategoryIcon(entry.category),
+                            contentDescription = null,
+                            tint = colors.accentColor,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = entry.category.displayName,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.accentColor
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text(
+                            text = screenEyebrow.uppercase(),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 3.sp,
+                            color = colors.accentColor
+                        )
+                        Text(
+                            text = entry.title,
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 30.sp,
+                            lineHeight = 36.sp,
+                            color = colors.primaryText
+                        )
                     }
                 }
+
             }
 
             // Ahl al-Bayt members
-            val members = entry.ahlulbaytMembers(lang)
+            val members = entry.ahlulbaytMembers
             if (members.isNotEmpty()) {
-                MembersCard(members = members, direction = direction)
+                MembersCard(members = members)
             }
 
             // Verses header
@@ -194,7 +185,6 @@ fun AhlulbaytEntryDetailScreen(entryId: String, navController: NavHostController
                     ahlulbaytVerse = ahlulbaytVerse,
                     index = index + 1,
                     totalVerses = entry.verseCount,
-                    lang = lang,
                     scale = scale,
                     navController = navController
                 )
@@ -209,17 +199,16 @@ fun AhlulbaytEntryDetailScreen(entryId: String, navController: NavHostController
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     EmSectionLabel(icon = Icons.Filled.Schedule, text = "Revelation Context")
-                    CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                        Text(
-                            text = entry.revelationContext(lang),
-                            fontFamily = if (lang == CommentaryLanguage.ENGLISH) CormorantFamily else AmiriFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = (17 * scale).sp,
-                            lineHeight = (17 * scale * 1.5f).sp,
-                            color = colors.primaryText,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    Text(
+                        text = entry.revelationContext,
+                        fontFamily = CormorantFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = (17 * scale).sp,
+                        lineHeight = (17 * scale * 1.5f).sp,
+                        color = colors.primaryText,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                 }
             }
 
@@ -231,7 +220,7 @@ fun AhlulbaytEntryDetailScreen(entryId: String, navController: NavHostController
                 ) {
                     EmSectionLabel(icon = Icons.Filled.Link, text = "Related Entries")
                     relatedEntries.forEach { related ->
-                        RelatedAhlulbaytEntryCard(entry = related, lang = lang) {
+                        RelatedAhlulbaytEntryCard(entry = related) {
                             navController.navigate(Routes.ahlulbaytEntry(related.id))
                         }
                     }
@@ -243,7 +232,7 @@ fun AhlulbaytEntryDetailScreen(entryId: String, navController: NavHostController
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MembersCard(members: List<String>, direction: LayoutDirection) {
+private fun MembersCard(members: List<String>) {
     val colors = Theme.colors
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -253,27 +242,26 @@ private fun MembersCard(members: List<String>, direction: LayoutDirection) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             EmSectionLabel(icon = Icons.Filled.Groups, text = "Ahl al-Bayt Members")
-            CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    members.forEach { member ->
-                        Text(
-                            text = member,
-                            fontSize = 13.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.accentColor,
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(colors.accentChip)
-                                .border(1.dp, colors.strokeColor, CircleShape)
-                                .padding(horizontal = 13.dp, vertical = 7.dp)
-                        )
-                    }
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                members.forEach { member ->
+                    Text(
+                        text = member,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.accentColor,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(colors.accentChip)
+                            .border(1.dp, colors.strokeColor, CircleShape)
+                            .padding(horizontal = 13.dp, vertical = 7.dp)
+                    )
                 }
             }
+
         }
     }
 }
@@ -284,7 +272,6 @@ private fun AhlulbaytVerseCard(
     ahlulbaytVerse: AhlulbaytVerse,
     index: Int,
     totalVerses: Int,
-    lang: CommentaryLanguage,
     scale: Float,
     navController: NavHostController
 ) {
@@ -389,50 +376,41 @@ private fun AhlulbaytVerseCard(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                // Verse translations exist only in English + Urdu; Arabic UI falls back to English.
-                val translationIsRTL = lang == CommentaryLanguage.URDU
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides if (translationIsRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                ) {
-                    Text(
-                        text = if (translationIsRTL) verse.translationUrdu ?: verse.translation else verse.translation,
-                        fontFamily = if (translationIsRTL) AmiriFamily else CormorantFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = (16 * scale).sp,
-                        lineHeight = (16 * scale * 1.5f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                Text(
+                    text = verse.translation,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = (16 * scale).sp,
+                    lineHeight = (16 * scale * 1.5f).sp,
+                    color = colors.secondaryText,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
             }
 
             // Verse context
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.accentChip.copy(alpha = colors.accentChip.alpha * 0.6f))
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.accentChip.copy(alpha = colors.accentChip.alpha * 0.6f))
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.ChatBubbleOutline,
-                        contentDescription = null,
-                        tint = colors.accentColor,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Text(
-                        text = ahlulbaytVerse.context(lang),
-                        fontFamily = if (lang == CommentaryLanguage.ENGLISH) null else AmiriFamily,
-                        fontSize = (13 * scale).sp,
-                        lineHeight = (13 * scale * 1.5f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                Icon(
+                    Icons.Filled.ChatBubbleOutline,
+                    contentDescription = null,
+                    tint = colors.accentColor,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = ahlulbaytVerse.context,
+                    fontFamily = null,
+                    fontSize = (13 * scale).sp,
+                    lineHeight = (13 * scale * 1.5f).sp,
+                    color = colors.secondaryText,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             EmGoldCTA(
@@ -447,7 +425,7 @@ private fun AhlulbaytVerseCard(
 }
 
 @Composable
-private fun RelatedAhlulbaytEntryCard(entry: AhlulbaytEntry, lang: CommentaryLanguage, onClick: () -> Unit) {
+private fun RelatedAhlulbaytEntryCard(entry: AhlulbaytEntry, onClick: () -> Unit) {
     val colors = Theme.colors
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -471,7 +449,7 @@ private fun RelatedAhlulbaytEntryCard(entry: AhlulbaytEntry, lang: CommentaryLan
                     color = colors.accentColor
                 )
                 Text(
-                    text = entry.title(lang),
+                    text = entry.title,
                     fontFamily = CormorantFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 17.sp,

@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,10 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -50,9 +47,7 @@ import com.thaqalayn.app.data.DeepDiveDescriptor
 import com.thaqalayn.app.data.JourneyDescriptor
 import com.thaqalayn.app.data.JourneyStatus
 import com.thaqalayn.app.data.SurahExperienceDescriptor
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.premium.PremiumManager
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmCoverTile
@@ -81,77 +76,69 @@ private data class LockedJourneyAlert(
  */
 @Composable
 fun JourneyHubScreen(navController: NavHostController) {
-    val lang = CommentaryLanguageManager.selectedLanguage
     var lockedAlert by remember { mutableStateOf<LockedJourneyAlert?>(null) }
     // Status depends on today's Hijri date + language; both are stable within a visit.
-    val ordered = remember(lang) { JourneyDescriptor.orderedByStatus() }
+    val ordered = remember() { JourneyDescriptor.orderedByStatus() }
 
     // System back dismisses the locked-journey overlay first.
     BackHandler(enabled = lockedAlert != null) { lockedAlert = null }
 
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-
     Box(modifier = Modifier.fillMaxSize()) {
-        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(top = 12.dp, bottom = 120.dp)
-            ) {
-                EmHeading(
-                    eyebrow = JourneyStrings.grow(lang),
-                    title = JourneyStrings.journeys(lang),
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(top = 12.dp, bottom = 120.dp)
+        ) {
+            EmHeading(
+                eyebrow = JourneyStrings.grow,
+                title = JourneyStrings.journeys,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
 
-                SacredSeasonsShelf(
-                    ordered = ordered,
-                    lang = lang,
-                    modifier = Modifier.padding(top = 20.dp),
-                    onSeeAll = { navController.navigate(Routes.JOURNEYS_ALL) },
-                    onTap = { descriptor, status ->
-                        handleJourneyTap(descriptor, status, lang, navController) { lockedAlert = it }
-                    }
-                )
+            SacredSeasonsShelf(
+                ordered = ordered,
+                modifier = Modifier.padding(top = 20.dp),
+                onSeeAll = { navController.navigate(Routes.JOURNEYS_ALL) },
+                onTap = { descriptor, status ->
+                    handleJourneyTap(descriptor, status, navController) { lockedAlert = it }
+                }
+            )
 
-                DiveShelf(
-                    label = JourneyStrings.deepDives(lang),
-                    items = DeepDiveDescriptor.all.map { d ->
-                        DiveShelfItem(
-                            coverRes = d.coverRes,
-                            available = d.available,
-                            eyebrow = diveShelfEyebrow(d.available, PremiumManager.canAccessDeepDive(d.id), lang),
-                            title = d.title.text(lang),
-                            onTap = { handleDiveTap(d, lang, navController) { lockedAlert = it } }
-                        )
-                    },
-                    lang = lang,
-                    modifier = Modifier.padding(top = 24.dp),
-                    onSeeAll = { navController.navigate(Routes.DEEP_DIVES_ALL) }
-                )
+            DiveShelf(
+                label = JourneyStrings.deepDives,
+                items = DeepDiveDescriptor.all.map { d ->
+                    DiveShelfItem(
+                        coverRes = d.coverRes,
+                        available = d.available,
+                        eyebrow = diveShelfEyebrow(d.available, PremiumManager.canAccessDeepDive(d.id)),
+                        title = d.title.en,
+                        onTap = { handleDiveTap(d, navController) { lockedAlert = it } }
+                    )
+                },
+                modifier = Modifier.padding(top = 24.dp),
+                onSeeAll = { navController.navigate(Routes.DEEP_DIVES_ALL) }
+            )
 
-                DiveShelf(
-                    label = JourneyStrings.insideTheSurah(lang),
-                    items = SurahExperienceDescriptor.all.map { d ->
-                        DiveShelfItem(
-                            coverRes = d.coverRes,
-                            available = d.available,
-                            eyebrow = diveShelfEyebrow(d.available, PremiumManager.canAccessSurahExperience(d.id), lang),
-                            title = d.title.text(lang),
-                            onTap = { handleSurahExperienceTap(d, lang, navController) { lockedAlert = it } }
-                        )
-                    },
-                    lang = lang,
-                    modifier = Modifier.padding(top = 24.dp),
-                    onSeeAll = { navController.navigate(Routes.SURAH_EXPERIENCES_ALL) }
-                )
-            }
+            DiveShelf(
+                label = JourneyStrings.insideTheSurah,
+                items = SurahExperienceDescriptor.all.map { d ->
+                    DiveShelfItem(
+                        coverRes = d.coverRes,
+                        available = d.available,
+                        eyebrow = diveShelfEyebrow(d.available, PremiumManager.canAccessSurahExperience(d.id)),
+                        title = d.title.en,
+                        onTap = { handleSurahExperienceTap(d, navController) { lockedAlert = it } }
+                    )
+                },
+                modifier = Modifier.padding(top = 24.dp),
+                onSeeAll = { navController.navigate(Routes.SURAH_EXPERIENCES_ALL) }
+            )
         }
 
         lockedAlert?.let { alert ->
-            LockedJourneyOverlay(alert = alert, lang = lang) { lockedAlert = null }
+            LockedJourneyOverlay(alert = alert) { lockedAlert = null }
         }
     }
 }
@@ -160,72 +147,66 @@ fun JourneyHubScreen(navController: NavHostController) {
 @Composable
 fun AllJourneysScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     var lockedAlert by remember { mutableStateOf<LockedJourneyAlert?>(null) }
-    val ordered = remember(lang) { JourneyDescriptor.orderedByStatus() }
+    val ordered = remember() { JourneyDescriptor.orderedByStatus() }
     val nextUpId = nextUpId(ordered)
 
     // System back dismisses the locked-journey overlay first.
     BackHandler(enabled = lockedAlert != null) { lockedAlert = null }
 
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-
     Box(modifier = Modifier.fillMaxSize()) {
         com.thaqalayn.app.ui.components.ThemedBackground()
-        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 12.dp, bottom = 120.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(top = 12.dp, bottom = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, colors.strokeColor, CircleShape)
+                        .pressable { navController.popBackStack() },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .border(1.dp, colors.strokeColor, CircleShape)
-                            .pressable { navController.popBackStack() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = colors.primaryText,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Text(
-                        text = JourneyStrings.sacredSeasons(lang),
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 28.sp,
-                        color = colors.primaryText
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = colors.primaryText,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
+                Text(
+                    text = JourneyStrings.sacredSeasons,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 28.sp,
+                    color = colors.primaryText
+                )
+            }
 
-                ordered.forEach { (descriptor, status) ->
-                    JourneyCard(
-                        descriptor = descriptor,
-                        status = status,
-                        isNextUp = descriptor.id == nextUpId,
-                        lang = lang,
-                        onTap = {
-                            handleJourneyTap(descriptor, status, lang, navController) { lockedAlert = it }
-                        }
-                    )
-                }
+            ordered.forEach { (descriptor, status) ->
+                JourneyCard(
+                    descriptor = descriptor,
+                    status = status,
+                    isNextUp = descriptor.id == nextUpId,
+                    onTap = {
+                        handleJourneyTap(descriptor, status, navController) { lockedAlert = it }
+                    }
+                )
             }
         }
 
         lockedAlert?.let { alert ->
-            LockedJourneyOverlay(alert = alert, lang = lang) { lockedAlert = null }
+            LockedJourneyOverlay(alert = alert) { lockedAlert = null }
         }
     }
 }
@@ -233,13 +214,11 @@ fun AllJourneysScreen(navController: NavHostController) {
 /** The "All N" full list for Deep Dives (iOS SectionFullList). */
 @Composable
 fun AllDeepDivesScreen(navController: NavHostController) {
-    val lang = CommentaryLanguageManager.selectedLanguage
     var lockedAlert by remember { mutableStateOf<LockedJourneyAlert?>(null) }
     BackHandler(enabled = lockedAlert != null) { lockedAlert = null }
 
     SectionFullList(
-        title = JourneyStrings.deepDives(lang),
-        lang = lang,
+        title = JourneyStrings.deepDives,
         navController = navController,
         lockedAlert = lockedAlert,
         onDismissAlert = { lockedAlert = null }
@@ -247,13 +226,12 @@ fun AllDeepDivesScreen(navController: NavHostController) {
         DeepDiveDescriptor.all.forEach { d ->
             DiveCard(
                 cover = d.coverRes,
-                eyebrow = JourneyStrings.deepDiveEyebrow(lang),
+                eyebrow = JourneyStrings.deepDiveEyebrow,
                 locked = d.available && !PremiumManager.canAccessDeepDive(d.id),
-                title = d.title.text(lang),
-                subtitle = d.subtitle.text(lang),
+                title = d.title.en,
+                subtitle = d.subtitle.en,
                 available = d.available,
-                lang = lang,
-                onTap = { handleDiveTap(d, lang, navController) { lockedAlert = it } }
+                onTap = { handleDiveTap(d, navController) { lockedAlert = it } }
             )
         }
     }
@@ -262,13 +240,11 @@ fun AllDeepDivesScreen(navController: NavHostController) {
 /** The "All N" full list for Inside the Surah experiences (iOS SectionFullList). */
 @Composable
 fun AllSurahExperiencesScreen(navController: NavHostController) {
-    val lang = CommentaryLanguageManager.selectedLanguage
     var lockedAlert by remember { mutableStateOf<LockedJourneyAlert?>(null) }
     BackHandler(enabled = lockedAlert != null) { lockedAlert = null }
 
     SectionFullList(
-        title = JourneyStrings.insideTheSurah(lang),
-        lang = lang,
+        title = JourneyStrings.insideTheSurah,
         navController = navController,
         lockedAlert = lockedAlert,
         onDismissAlert = { lockedAlert = null }
@@ -276,13 +252,12 @@ fun AllSurahExperiencesScreen(navController: NavHostController) {
         SurahExperienceDescriptor.all.forEach { d ->
             DiveCard(
                 cover = d.coverRes,
-                eyebrow = JourneyStrings.surahJourneyEyebrow(lang),
+                eyebrow = JourneyStrings.surahJourneyEyebrow,
                 locked = d.available && !PremiumManager.canAccessSurahExperience(d.id),
-                title = d.title.text(lang),
-                subtitle = d.subtitle.text(lang),
+                title = d.title.en,
+                subtitle = d.subtitle.en,
                 available = d.available,
-                lang = lang,
-                onTap = { handleSurahExperienceTap(d, lang, navController) { lockedAlert = it } }
+                onTap = { handleSurahExperienceTap(d, navController) { lockedAlert = it } }
             )
         }
     }
@@ -292,70 +267,66 @@ fun AllSurahExperiencesScreen(navController: NavHostController) {
 @Composable
 private fun SectionFullList(
     title: String,
-    lang: CommentaryLanguage,
     navController: NavHostController,
     lockedAlert: LockedJourneyAlert?,
     onDismissAlert: () -> Unit,
     content: @Composable () -> Unit
 ) {
     val colors = Theme.colors
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     Box(modifier = Modifier.fillMaxSize()) {
         com.thaqalayn.app.ui.components.ThemedBackground()
-        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 12.dp, bottom = 120.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(top = 12.dp, bottom = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, colors.strokeColor, CircleShape)
+                        .pressable { navController.popBackStack() },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .border(1.dp, colors.strokeColor, CircleShape)
-                            .pressable { navController.popBackStack() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = colors.primaryText,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Text(
-                        text = title,
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 28.sp,
-                        color = colors.primaryText
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = colors.primaryText,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
-                content()
+                Text(
+                    text = title,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 28.sp,
+                    color = colors.primaryText
+                )
             }
+            content()
         }
 
         lockedAlert?.let { alert ->
-            LockedJourneyOverlay(alert = alert, lang = lang, onDismiss = onDismissAlert)
+            LockedJourneyOverlay(alert = alert, onDismiss = onDismissAlert)
         }
     }
 }
 
 /** Poster eyebrow for a dive/experience card: READY | PREMIUM chip | SOON. */
-private fun diveShelfEyebrow(available: Boolean, canAccess: Boolean, lang: CommentaryLanguage): PosterEyebrow =
+private fun diveShelfEyebrow(available: Boolean, canAccess: Boolean): PosterEyebrow =
     when {
-        available && canAccess -> PosterEyebrow.Status(JourneyStrings.ready(lang), active = true)
-        available -> PosterEyebrow.Premium(JourneyStrings.premium(lang))
-        else -> PosterEyebrow.Status(JourneyStrings.soon(lang), active = false)
+        available && canAccess -> PosterEyebrow.Status(JourneyStrings.ready, active = true)
+        available -> PosterEyebrow.Premium(JourneyStrings.premium)
+        else -> PosterEyebrow.Status(JourneyStrings.soon, active = false)
     }
 
 /**
@@ -366,7 +337,6 @@ private fun diveShelfEyebrow(available: Boolean, canAccess: Boolean, lang: Comme
  */
 private fun handleDiveTap(
     d: DeepDiveDescriptor,
-    lang: CommentaryLanguage,
     navController: NavHostController,
     showAlert: (LockedJourneyAlert) -> Unit
 ) {
@@ -375,8 +345,8 @@ private fun handleDiveTap(
     } else {
         showAlert(
             LockedJourneyAlert(
-                title = JourneyStrings.comingSoon(lang),
-                detail = JourneyStrings.deepDiveOnItsWay(d.title.text(lang), lang),
+                title = JourneyStrings.comingSoon,
+                detail = JourneyStrings.deepDiveOnItsWay(d.title.en),
                 pointer = null
             )
         )
@@ -386,7 +356,6 @@ private fun handleDiveTap(
 /** Same handling for Inside-the-Surah experiences. */
 private fun handleSurahExperienceTap(
     d: SurahExperienceDescriptor,
-    lang: CommentaryLanguage,
     navController: NavHostController,
     showAlert: (LockedJourneyAlert) -> Unit
 ) {
@@ -395,8 +364,8 @@ private fun handleSurahExperienceTap(
     } else {
         showAlert(
             LockedJourneyAlert(
-                title = JourneyStrings.comingSoon(lang),
-                detail = JourneyStrings.deepDiveOnItsWay(d.title.text(lang), lang),
+                title = JourneyStrings.comingSoon,
+                detail = JourneyStrings.deepDiveOnItsWay(d.title.en),
                 pointer = null
             )
         )
@@ -415,7 +384,6 @@ private fun nextUpId(ordered: List<Pair<JourneyDescriptor, JourneyStatus>>): Str
 private fun handleJourneyTap(
     descriptor: JourneyDescriptor,
     status: JourneyStatus,
-    lang: CommentaryLanguage,
     navController: NavHostController,
     showAlert: (LockedJourneyAlert) -> Unit
 ) {
@@ -423,28 +391,28 @@ private fun handleJourneyTap(
         navController.navigate(Routes.journey(descriptor.id))
         return
     }
-    val title = JourneyStrings.title(descriptor.id, lang)
+    val title = JourneyStrings.title(descriptor.id)
     val (alertTitle, detail) = when (status) {
-        is JourneyStatus.Ended -> JourneyStrings.hasEnded(title, lang) to status.returnsLabel
-        is JourneyStatus.ComingSoon -> JourneyStrings.notOpenYet(title, lang) to status.startsLabel
+        is JourneyStatus.Ended -> JourneyStrings.hasEnded(title) to status.returnsLabel
+        is JourneyStatus.ComingSoon -> JourneyStrings.notOpenYet(title) to status.startsLabel
         is JourneyStatus.Active -> title to ""
     }
-    showAlert(LockedJourneyAlert(alertTitle, detail, pointerLine(descriptor, lang)))
+    showAlert(LockedJourneyAlert(alertTitle, detail, pointerLine(descriptor)))
 }
 
 /**
  * "Up next: X · in N days" (or "X is open now") for the soonest journey to
  * open, excluding the tapped one. Null when the tapped journey IS the soonest.
  */
-private fun pointerLine(tapped: JourneyDescriptor, lang: CommentaryLanguage): String? {
+private fun pointerLine(tapped: JourneyDescriptor): String? {
     val rows = JourneyDescriptor.all.map { it to it.status() }
     val soonest = rows.minByOrNull { it.second.opensIn } ?: return null
     if (soonest.first.id == tapped.id) return null
-    val title = JourneyStrings.title(soonest.first.id, lang)
-    if (soonest.second.isActive) return JourneyStrings.isOpenNow(title, lang)
+    val title = JourneyStrings.title(soonest.first.id)
+    if (soonest.second.isActive) return JourneyStrings.isOpenNow(title)
     val days = soonest.second.opensIn
-    if (days <= 0) return JourneyStrings.upNextToday(title, lang)
-    return JourneyStrings.upNextInDays(title, days, lang)
+    if (days <= 0) return JourneyStrings.upNextToday(title)
+    return JourneyStrings.upNextInDays(title, days)
 }
 
 // MARK: - Sacred Seasons shelf (iOS JourneyShelf + ShelfCard)
@@ -452,7 +420,6 @@ private fun pointerLine(tapped: JourneyDescriptor, lang: CommentaryLanguage): St
 @Composable
 private fun SacredSeasonsShelf(
     ordered: List<Pair<JourneyDescriptor, JourneyStatus>>,
-    lang: CommentaryLanguage,
     modifier: Modifier = Modifier,
     onSeeAll: () -> Unit,
     onTap: (JourneyDescriptor, JourneyStatus) -> Unit
@@ -466,7 +433,7 @@ private fun SacredSeasonsShelf(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = JourneyStrings.sacredSeasons(lang).uppercase(),
+                text = JourneyStrings.sacredSeasons.uppercase(),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp,
@@ -479,7 +446,7 @@ private fun SacredSeasonsShelf(
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Text(
-                    text = JourneyStrings.allCount(ordered.size, lang),
+                    text = JourneyStrings.allCount(ordered.size),
                     fontSize = 12.5.sp,
                     color = colors.secondaryText
                 )
@@ -505,7 +472,6 @@ private fun SacredSeasonsShelf(
                 ShelfCard(
                     descriptor = descriptor,
                     status = status,
-                    lang = lang,
                     onTap = { onTap(descriptor, status) }
                 )
             }
@@ -518,17 +484,16 @@ private fun SacredSeasonsShelf(
 private fun ShelfCard(
     descriptor: JourneyDescriptor,
     status: JourneyStatus,
-    lang: CommentaryLanguage,
     onTap: () -> Unit
 ) {
     val statusText = when (status) {
-        is JourneyStatus.Active -> JourneyStrings.live(lang)
-        is JourneyStatus.ComingSoon -> JourneyStrings.inDaysShort(status.daysUntil, lang)
-        is JourneyStatus.Ended -> JourneyStrings.endedShort(lang)
+        is JourneyStatus.Active -> JourneyStrings.live
+        is JourneyStatus.ComingSoon -> JourneyStrings.inDaysShort(status.daysUntil)
+        is JourneyStatus.Ended -> JourneyStrings.endedShort
     }
     PosterCard(
         cover = journeyUiConfig(descriptor.id).coverRes,
-        title = JourneyStrings.title(descriptor.id, lang),
+        title = JourneyStrings.title(descriptor.id),
         eyebrow = PosterEyebrow.Status(statusText, active = status.isActive),
         available = status.isActive,
         onTap = onTap
@@ -550,7 +515,6 @@ private data class DiveShelfItem(
 private fun DiveShelf(
     label: String,
     items: List<DiveShelfItem>,
-    lang: CommentaryLanguage,
     modifier: Modifier = Modifier,
     onSeeAll: () -> Unit
 ) {
@@ -576,7 +540,7 @@ private fun DiveShelf(
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Text(
-                    text = JourneyStrings.allCount(items.size, lang),
+                    text = JourneyStrings.allCount(items.size),
                     fontSize = 12.5.sp,
                     color = colors.secondaryText
                 )
@@ -628,7 +592,6 @@ private fun DiveCard(
     title: String,
     subtitle: String,
     available: Boolean,
-    lang: CommentaryLanguage,
     onTap: () -> Unit
 ) {
     val colors = Theme.colors
@@ -654,7 +617,7 @@ private fun DiveCard(
             ) {
                 if (locked) {
                     Text(
-                        text = JourneyStrings.premium(lang).uppercase(),
+                        text = JourneyStrings.premium.uppercase(),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.4.sp,
@@ -698,7 +661,7 @@ private fun DiveCard(
                 )
             } else {
                 Text(
-                    text = JourneyStrings.soon(lang),
+                    text = JourneyStrings.soon,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.4.sp,
@@ -720,15 +683,14 @@ private fun JourneyCard(
     descriptor: JourneyDescriptor,
     status: JourneyStatus,
     isNextUp: Boolean,
-    lang: CommentaryLanguage,
     onTap: () -> Unit
 ) {
     val colors = Theme.colors
     val detailLine = when (status) {
         is JourneyStatus.Active -> status.line
-        is JourneyStatus.ComingSoon -> JourneyStrings.comingSoonInDays(status.daysUntil, lang)
+        is JourneyStatus.ComingSoon -> JourneyStrings.comingSoonInDays(status.daysUntil)
         is JourneyStatus.Ended ->
-            if (isNextUp) status.returnsLabel else JourneyStrings.endedReturns(status.returnsLabel, lang)
+            if (isNextUp) status.returnsLabel else JourneyStrings.endedReturns(status.returnsLabel)
     }
 
     EmCard(
@@ -751,7 +713,7 @@ private fun JourneyCard(
             ) {
                 if (isNextUp) {
                     Text(
-                        text = JourneyStrings.nextUp(lang),
+                        text = JourneyStrings.nextUp,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.6.sp,
@@ -763,7 +725,7 @@ private fun JourneyCard(
                     )
                 } else {
                     Text(
-                        text = JourneyStrings.eyebrow(descriptor.id, descriptor.eyebrow, lang).uppercase(),
+                        text = descriptor.eyebrow.uppercase(),
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 2.sp,
@@ -771,7 +733,7 @@ private fun JourneyCard(
                     )
                 }
                 Text(
-                    text = JourneyStrings.title(descriptor.id, lang),
+                    text = JourneyStrings.title(descriptor.id),
                     fontFamily = CormorantFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 22.sp,
@@ -800,7 +762,6 @@ private fun JourneyCard(
 @Composable
 private fun LockedJourneyOverlay(
     alert: LockedJourneyAlert,
-    lang: CommentaryLanguage,
     onDismiss: () -> Unit
 ) {
     val colors = Theme.colors
@@ -856,7 +817,7 @@ private fun LockedJourneyOverlay(
                     )
                 }
             }
-            EmGoldCTA(title = JourneyStrings.gotIt(lang), small = true) { onDismiss() }
+            EmGoldCTA(title = JourneyStrings.gotIt, small = true) { onDismiss() }
         }
     }
 }

@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.thaqalayn.app.R
+import com.thaqalayn.app.data.DailyVerseProvider
 import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.model.Verse
 import com.thaqalayn.app.notifications.NotificationManager
@@ -61,8 +62,7 @@ fun DailyVersePage(
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
 
-    val todayVerse = remember { NotificationManager.selectTodayVerse() }
-    val monthData = remember { NotificationManager.currentMonthData() }
+    val todayVerse = DailyVerseProvider.today
     val verse by produceState<Verse?>(null, todayVerse) {
         value = todayVerse?.let {
             DataManager.shared.loadQuranData()
@@ -114,7 +114,7 @@ fun DailyVersePage(
             }
 
             // Notification preview card (today's real verse)
-            if (todayVerse != null && monthData != null && verse != null) {
+            if (todayVerse != null && verse != null) {
                 FadeRise(visible = isVisible, delayMillis = 700, riseDistance = 30.dp, durationMillis = 800) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -131,8 +131,9 @@ fun DailyVersePage(
                                     fontWeight = FontWeight.SemiBold,
                                     color = OnbPalette.secondaryText
                                 )
+                                // On a sacred day the occasion replaces the theme line.
                                 Text(
-                                    text = monthData.name,
+                                    text = todayVerse.occasionEn ?: todayVerse.themeEn,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = OnbPalette.primaryText
@@ -170,7 +171,7 @@ fun DailyVersePage(
                                 color = OnbPalette.tertiaryText
                             )
                             Text(
-                                text = todayVerse.theme,
+                                text = todayVerse.themeEn,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = chipGold.fg,

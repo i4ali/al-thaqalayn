@@ -40,8 +40,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.data.DuasManager
-import com.thaqalayn.app.model.CommentaryLanguage
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.DuaListenButton
@@ -56,19 +54,18 @@ import com.thaqalayn.app.ui.theme.Theme
 @Composable
 fun DuaDetailScreen(duaId: String, navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
     val context = LocalContext.current
     val dua = remember(duaId) { DuasManager.byId(duaId) } ?: return
 
     val shareText = """
-        ${dua.situation(lang)}
+        ${dua.situation}
 
         ${dua.arabic}
 
         ${dua.transliteration}
 
-        ${dua.translation(lang)}
+        ${dua.translation}
 
         — Source: ${dua.source}
         Sent via Thaqalayn
@@ -103,26 +100,22 @@ fun DuaDetailScreen(duaId: String, navController: NavHostController) {
             }
 
             // Header
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = dua.category.uppercase(),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = if (lang.isRTL) 0.sp else 3.sp,
-                        color = colors.accentColor
-                    )
-                    Text(
-                        text = dua.situation(lang),
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 30.sp,
-                        lineHeight = 36.sp,
-                        color = colors.primaryText
-                    )
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = dua.category.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 3.sp,
+                    color = colors.accentColor
+                )
+                Text(
+                    text = dua.situation,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 30.sp,
+                    lineHeight = 36.sp,
+                    color = colors.primaryText
+                )
             }
 
             // Arabic
@@ -159,21 +152,18 @@ fun DuaDetailScreen(duaId: String, navController: NavHostController) {
 
             // Translation
             EmCard(modifier = Modifier.fillMaxWidth()) {
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides if (lang == CommentaryLanguage.URDU) LayoutDirection.Rtl else LayoutDirection.Ltr
-                ) {
-                    Text(
-                        text = dua.translation(lang),
-                        fontFamily = if (lang == CommentaryLanguage.URDU) AmiriFamily else CormorantFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = (17 * scale).sp,
-                        lineHeight = (17 * scale * 1.5f).sp,
-                        color = colors.primaryText,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
-                    )
-                }
+                Text(
+                    text = dua.translation,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = (17 * scale).sp,
+                    lineHeight = (17 * scale * 1.5f).sp,
+                    color = colors.primaryText,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                )
+
             }
 
             // Source (tappable when the dua is Qur'anic)

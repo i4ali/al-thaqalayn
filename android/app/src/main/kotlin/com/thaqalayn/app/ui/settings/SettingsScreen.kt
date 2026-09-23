@@ -31,8 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.audio.AudioManager
+import com.thaqalayn.app.data.DailyVerseProvider
 import com.thaqalayn.app.data.ProgressManager
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.Reciter
 import com.thaqalayn.app.notifications.NotificationManager
 import com.thaqalayn.app.premium.BillingManager
@@ -46,9 +46,10 @@ import com.thaqalayn.app.ui.components.EmHeading
 import com.thaqalayn.app.ui.components.TextSizePanel
 import com.thaqalayn.app.ui.components.ThemedBackground
 import com.thaqalayn.app.ui.components.pressable
+import com.thaqalayn.app.ui.theme.CormorantFamily
 import com.thaqalayn.app.ui.theme.Theme
 
-/** Settings: appearance, language, reading, notifications, audio, premium, about (iOS SettingsView core). */
+/** Settings: appearance, reading, notifications, audio, premium, about (iOS SettingsView core). */
 @Composable
 fun SettingsScreen(navController: NavHostController) {
     val colors = Theme.colors
@@ -146,30 +147,6 @@ fun SettingsScreen(navController: NavHostController) {
                     }
                 }
 
-                // Language
-                item {
-                    SettingsSection(title = "Language") {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text(
-                                "Translations, duas & commentary",
-                                fontSize = 12.sp,
-                                color = colors.tertiaryText
-                            )
-                            SegmentedPicker(
-                                options = CommentaryLanguage.supportedTafsirLanguages.map { it.displayName },
-                                selectedIndex = CommentaryLanguage.supportedTafsirLanguages
-                                    .indexOf(com.thaqalayn.app.settings.CommentaryLanguageManager.selectedLanguage)
-                                    .coerceAtLeast(0),
-                                onSelect = {
-                                    com.thaqalayn.app.settings.CommentaryLanguageManager.setLanguage(
-                                        CommentaryLanguage.supportedTafsirLanguages[it]
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-
                 // Reading text size
                 item {
                     SettingsSection(title = "Reading") {
@@ -223,16 +200,6 @@ fun SettingsScreen(navController: NavHostController) {
                                     subtitle = formatNotificationTime(notifPrefs.hour, notifPrefs.minute)
                                 ) { showTimePicker = true }
 
-                                SettingsNavRow(
-                                    title = "Language",
-                                    subtitle = notifPrefs.language.displayName
-                                ) {
-                                    // iOS toggleNotificationLanguage: English <-> Urdu
-                                    val next = if (notifPrefs.language == CommentaryLanguage.ENGLISH)
-                                        CommentaryLanguage.URDU else CommentaryLanguage.ENGLISH
-                                    NotificationManager.updatePreferences(notifPrefs.copy(language = next))
-                                }
-
                                 SettingsToggleRow(
                                     title = "Include Commentary",
                                     subtitle = if (notifPrefs.includeTafsir) "Brief tafsir shown" else "Verse only",
@@ -242,10 +209,10 @@ fun SettingsScreen(navController: NavHostController) {
                                     }
                                 )
 
-                                // Today's verse preview
-                                val todayVerse = NotificationManager.selectTodayVerse()
-                                val monthData = NotificationManager.currentMonthData()
-                                if (todayVerse != null && monthData != null) {
+                                // Today's verse preview. On a sacred day the occasion
+                                // replaces the generic header (iOS 7.4).
+                                val todayVerse = DailyVerseProvider.today
+                                if (todayVerse != null) {
                                     Column(
                                         verticalArrangement = Arrangement.spacedBy(4.dp),
                                         modifier = Modifier
@@ -261,7 +228,7 @@ fun SettingsScreen(navController: NavHostController) {
                                         ) {
                                             Text("★", fontSize = 12.sp, color = colors.accentColor)
                                             Text(
-                                                "Today's Verse (${monthData.name})",
+                                                todayVerse.occasionEn ?: "Today's Verse",
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = colors.primaryText
@@ -273,7 +240,13 @@ fun SettingsScreen(navController: NavHostController) {
                                             fontWeight = FontWeight.Medium,
                                             color = colors.secondaryText
                                         )
-                                        Text(todayVerse.theme, fontSize = 12.sp, color = colors.tertiaryText)
+                                        Text(
+                                            todayVerse.themeEn,
+                                            fontFamily = CormorantFamily,
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 18.sp,
+                                            color = colors.primaryText
+                                        )
                                     }
                                 }
                             }
@@ -415,30 +388,10 @@ fun SettingsScreen(navController: NavHostController) {
                 item {
                     SettingsSection(title = "About") {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .pressable { navController.navigate(Routes.TAFSIR_SOURCES) },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Tafsir Sources", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = colors.primaryText)
-                                    Text("Books and scholars referenced", fontSize = 12.sp, color = colors.tertiaryText)
-                                }
-                                Icon(
-                                    Icons.Filled.ChevronRight,
-                                    contentDescription = null,
-                                    tint = colors.tertiaryText,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("Thaqalayn for Android", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = colors.primaryText)
                                 Text(
-                                    "The Holy Quran with 5-layer Shia tafsir in English, Urdu & Arabic.",
+                                    "The Holy Quran read passage by passage, with sourced Shia commentary.",
                                     fontSize = 12.sp,
                                     color = colors.tertiaryText
                                 )

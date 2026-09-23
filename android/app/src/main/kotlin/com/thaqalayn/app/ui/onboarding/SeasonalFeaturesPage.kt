@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.sp
 import com.thaqalayn.app.R
 import com.thaqalayn.app.data.JourneyDescriptor
 import com.thaqalayn.app.data.JourneyStatus
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.ui.components.PhosphorIcon
 import com.thaqalayn.app.ui.journey.journeyUiConfig
 import com.thaqalayn.app.ui.strings.JourneyStrings
@@ -241,7 +240,7 @@ private fun SeasonSpotlightHero(
             )
 
             Text(
-                text = JourneyStrings.title(descriptor.id, CommentaryLanguage.ENGLISH),
+                text = JourneyStrings.title(descriptor.id),
                 style = onbHeroTitle,
                 color = OnbPalette.primaryText,
                 modifier = Modifier.padding(top = 4.dp, bottom = 13.dp)
@@ -386,7 +385,7 @@ private fun YearAheadRow(descriptor: JourneyDescriptor, status: JourneyStatus) {
 
         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Text(
-                text = JourneyStrings.title(descriptor.id, CommentaryLanguage.ENGLISH),
+                text = JourneyStrings.title(descriptor.id),
                 style = onbRowTitle,
                 color = OnbPalette.primaryText
             )

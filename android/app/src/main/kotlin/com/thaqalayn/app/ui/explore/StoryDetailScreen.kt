@@ -47,13 +47,11 @@ import com.thaqalayn.app.audio.AudioManager
 import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.data.PropheticStoriesManager
 import com.thaqalayn.app.model.AudioPlayerState
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.PropheticStory
 import com.thaqalayn.app.model.StoryVerse
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.Verse
 import com.thaqalayn.app.model.VerseWithTafsir
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
@@ -69,13 +67,11 @@ import com.thaqalayn.app.ui.theme.Theme
 @Composable
 fun StoryDetailScreen(storyId: String, navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
     val story = remember(storyId) { PropheticStoriesManager.byId(storyId) } ?: return
     val relatedStories = remember(story) {
         story.relatedStories.mapNotNull { PropheticStoriesManager.byId(it) }
     }
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
@@ -107,54 +103,53 @@ fun StoryDetailScreen(storyId: String, navController: NavHostController) {
 
             // Story header card
             EmCard(modifier = Modifier.fillMaxWidth()) {
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    Column(
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                            .clip(CircleShape)
+                            .background(colors.accentChip)
+                            .border(1.dp, colors.strokeColor, CircleShape)
+                            .padding(horizontal = 13.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(colors.accentChip)
-                                .border(1.dp, colors.strokeColor, CircleShape)
-                                .padding(horizontal = 13.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(7.dp)
-                        ) {
-                            Icon(
-                                storyCategoryIcon(story.category),
-                                contentDescription = null,
-                                tint = colors.accentColor,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Text(
-                                text = story.category.displayName,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.accentColor
-                            )
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = story.prophet(lang).uppercase(),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = if (lang.isRTL) 0.sp else 2.sp,
-                                color = colors.accentColor
-                            )
-                            Text(
-                                text = story.title(lang),
-                                fontFamily = CormorantFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 30.sp,
-                                lineHeight = 36.sp,
-                                color = colors.primaryText
-                            )
-                        }
+                        Icon(
+                            storyCategoryIcon(story.category),
+                            contentDescription = null,
+                            tint = colors.accentColor,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = story.category.displayName,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.accentColor
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = story.prophet.uppercase(),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp,
+                            color = colors.accentColor
+                        )
+                        Text(
+                            text = story.title,
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 30.sp,
+                            lineHeight = 36.sp,
+                            color = colors.primaryText
+                        )
                     }
                 }
+
             }
 
             // Quranic narrative intro
@@ -174,13 +169,13 @@ fun StoryDetailScreen(storyId: String, navController: NavHostController) {
 
             // Verses with story notes
             story.verses.forEach { storyVerse ->
-                StoryVerseCard(storyVerse = storyVerse, lang = lang, scale = scale, navController = navController)
+                StoryVerseCard(storyVerse = storyVerse, scale = scale, navController = navController)
             }
 
             // Lessons summary
-            val lessons = story.lessonsSummary(lang)
+            val lessons = story.lessonsSummary
             if (!lessons.isNullOrBlank()) {
-                LessonsCard(lessons = lessons, lang = lang, scale = scale)
+                LessonsCard(lessons = lessons, scale = scale)
             }
 
             // Related stories
@@ -191,7 +186,7 @@ fun StoryDetailScreen(storyId: String, navController: NavHostController) {
                 ) {
                     EmSectionLabel(icon = Icons.Filled.Link, text = "Related Stories")
                     relatedStories.forEach { related ->
-                        RelatedStoryCard(story = related, lang = lang) {
+                        RelatedStoryCard(story = related) {
                             navController.navigate(Routes.story(related.id))
                         }
                     }
@@ -205,7 +200,6 @@ fun StoryDetailScreen(storyId: String, navController: NavHostController) {
 @Composable
 private fun StoryVerseCard(
     storyVerse: StoryVerse,
-    lang: CommentaryLanguage,
     scale: Float,
     navController: NavHostController
 ) {
@@ -321,57 +315,49 @@ private fun StoryVerseCard(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                // Verse translations exist only in English + Urdu; Arabic UI falls back to English.
-                val translationIsRTL = lang == CommentaryLanguage.URDU
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides if (translationIsRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                ) {
-                    Text(
-                        text = if (translationIsRTL) verse.translationUrdu ?: verse.translation else verse.translation,
-                        fontFamily = if (translationIsRTL) AmiriFamily else CormorantFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = (16 * scale).sp,
-                        lineHeight = (16 * scale * 1.5f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                Text(
+                    text = verse.translation,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = (16 * scale).sp,
+                    lineHeight = (16 * scale * 1.5f).sp,
+                    color = colors.secondaryText,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
             }
 
             // Story note
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.accentChip.copy(alpha = colors.accentChip.alpha * 0.6f))
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.accentChip.copy(alpha = colors.accentChip.alpha * 0.6f))
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.ChatBubbleOutline,
-                        contentDescription = null,
-                        tint = colors.accentColor,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Text(
-                        text = storyVerse.storyNote(lang),
-                        fontFamily = if (lang == CommentaryLanguage.ENGLISH) null else AmiriFamily,
-                        fontSize = (13 * scale).sp,
-                        lineHeight = (13 * scale * 1.5f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                Icon(
+                    Icons.Filled.ChatBubbleOutline,
+                    contentDescription = null,
+                    tint = colors.accentColor,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = storyVerse.storyNote,
+                    fontFamily = null,
+                    fontSize = (13 * scale).sp,
+                    lineHeight = (13 * scale * 1.5f).sp,
+                    color = colors.secondaryText,
+                    modifier = Modifier.weight(1f)
+                )
             }
+
         }
     }
 }
 
 @Composable
-private fun LessonsCard(lessons: String, lang: CommentaryLanguage, scale: Float) {
+private fun LessonsCard(lessons: String, scale: Float) {
     val colors = Theme.colors
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -381,25 +367,22 @@ private fun LessonsCard(lessons: String, lang: CommentaryLanguage, scale: Float)
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             EmSectionLabel(icon = Icons.Filled.Lightbulb, text = "Lessons to Learn")
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-            ) {
-                Text(
-                    text = lessons,
-                    fontFamily = if (lang == CommentaryLanguage.ENGLISH) CormorantFamily else AmiriFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = (17 * scale).sp,
-                    lineHeight = (17 * scale * 1.5f).sp,
-                    color = colors.primaryText,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            Text(
+                text = lessons,
+                fontFamily = CormorantFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = (17 * scale).sp,
+                lineHeight = (17 * scale * 1.5f).sp,
+                color = colors.primaryText,
+                modifier = Modifier.fillMaxWidth()
+            )
+
         }
     }
 }
 
 @Composable
-private fun RelatedStoryCard(story: PropheticStory, lang: CommentaryLanguage, onClick: () -> Unit) {
+private fun RelatedStoryCard(story: PropheticStory, onClick: () -> Unit) {
     val colors = Theme.colors
     EmCard(cornerRadius = 16.dp, modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -416,14 +399,14 @@ private fun RelatedStoryCard(story: PropheticStory, lang: CommentaryLanguage, on
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Text(
-                    text = story.prophet(lang),
+                    text = story.prophet,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,
                     color = colors.accentColor
                 )
                 Text(
-                    text = story.title(lang),
+                    text = story.title,
                     fontFamily = CormorantFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 17.sp,

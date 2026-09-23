@@ -36,7 +36,6 @@ import com.thaqalayn.app.data.QuranSearchEngine
 import com.thaqalayn.app.data.QuranSearchResults
 import com.thaqalayn.app.data.ThemeHit
 import com.thaqalayn.app.data.VerseHit
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.ui.components.PhosphorIcon
 import com.thaqalayn.app.ui.components.pressable
 import com.thaqalayn.app.ui.home.SurahListRow
@@ -62,7 +61,6 @@ fun colorFromHex(hex: String): Color {
 @Composable
 fun SearchResults(
     query: String,
-    lang: CommentaryLanguage,
     onOpenSurah: (Int) -> Unit,
     onOpenVerse: (Int, Int) -> Unit,
     onOpenExperience: (String) -> Unit,
@@ -93,7 +91,7 @@ fun SearchResults(
             ) {
                 PhosphorIcon(resId = R.drawable.ph_magnifying_glass, size = 28.dp, tint = colors.tertiaryText)
                 Text(
-                    text = QuranTabStrings.noResults(query, lang),
+                    text = QuranTabStrings.noResults(query),
                     fontSize = 15.sp,
                     color = colors.secondaryText
                 )
@@ -102,12 +100,11 @@ fun SearchResults(
         }
 
         if (results.surahs.isNotEmpty()) {
-            SectionLabel(QuranTabStrings.surahsLabel(lang), results.surahs.size)
+            SectionLabel(QuranTabStrings.surahsLabel, results.surahs.size)
             results.surahs.forEach { number ->
                 surahsByNumber[number]?.let { surah ->
                     SurahListRow(
                         surah = surah,
-                        lang = lang,
                         onOpenSurah = { onOpenSurah(number) },
                         onOpenExperience = onOpenExperience,
                         onShowPaywall = onShowPaywall
@@ -117,22 +114,22 @@ fun SearchResults(
         }
 
         if (results.verses.isNotEmpty()) {
-            SectionLabel(QuranTabStrings.versesLabel(lang), results.verseTotal)
+            SectionLabel(QuranTabStrings.versesLabel, results.verseTotal)
             results.verses.forEach { hit ->
                 VerseResultRow(hit) { onOpenVerse(hit.surahNumber, hit.verseNumber) }
             }
             if (results.verseTotal > results.verses.size) {
-                MoreLabel(results.verses.size, results.verseTotal, lang)
+                MoreLabel(results.verses.size, results.verseTotal)
             }
         }
 
         if (results.themes.isNotEmpty()) {
-            SectionLabel(QuranTabStrings.themesLabel(lang), results.themeTotal)
+            SectionLabel(QuranTabStrings.themesLabel, results.themeTotal)
             results.themes.forEach { hit ->
                 ThemeResultRow(hit) { onOpenVerse(hit.surahNumber, hit.verseNumber) }
             }
             if (results.themeTotal > results.themes.size) {
-                MoreLabel(results.themes.size, results.themeTotal, lang)
+                MoreLabel(results.themes.size, results.themeTotal)
             }
         }
     }
@@ -165,9 +162,9 @@ private fun SectionLabel(title: String, count: Int) {
 }
 
 @Composable
-private fun MoreLabel(showing: Int, total: Int, lang: CommentaryLanguage) {
+private fun MoreLabel(showing: Int, total: Int) {
     Text(
-        text = QuranTabStrings.showingFirst(showing, total, lang),
+        text = QuranTabStrings.showingFirst(showing, total),
         fontSize = 12.sp,
         color = Theme.colors.tertiaryText,
         modifier = Modifier.padding(vertical = 4.dp)

@@ -52,7 +52,6 @@ import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,20 +61,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.data.PropheticParallelsManager
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.ParallelCategory
 import com.thaqalayn.app.model.PropheticParallel
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
 import com.thaqalayn.app.ui.components.EmIconChip
@@ -121,32 +116,18 @@ private fun parallelCategoryIcon(category: ParallelCategory): ImageVector = when
     ParallelCategory.PERSECUTION -> Icons.Filled.GppBad
 }
 
-private fun eyebrow(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "أمثلة الأنبياء"
-    CommentaryLanguage.URDU -> "انبیائی مثالیں"
-    else -> "Prophetic Parallels"
-}
+private val eyebrow = "Prophetic Parallels"
 
-private fun title(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "لستَ وحدك"
-    CommentaryLanguage.URDU -> "آپ اکیلے نہیں ہیں"
-    else -> "You Aren't Alone"
-}
+private val title = "You Aren't Alone"
 
-private fun subtitle(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "قصصُ أنبياءَ ساروا الطريق نفسه"
-    CommentaryLanguage.URDU -> "انہی راہوں پر چلنے والے انبیاء کی داستانیں"
-    else -> "Stories of Prophets who walked the same road"
-}
+private val subtitle = "Stories of Prophets who walked the same road"
 
 /** Prophetic parallels list - searchable, category-filtered, grouped by category (iOS PropheticParallelsView). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PropheticParallelsScreen(navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val parallels = PropheticParallelsManager.parallels
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
     var searchText by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<ParallelCategory?>(null) }
 
@@ -200,35 +181,33 @@ fun PropheticParallelsScreen(navController: NavHostController) {
             }
 
             // Header
-            CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 16.dp, bottom = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)
-                ) {
-                    Text(
-                        text = eyebrow(lang).uppercase(),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = if (lang.isRTL) 0.sp else 3.sp,
-                        color = colors.accentColor
-                    )
-                    Text(
-                        text = title(lang),
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 36.sp,
-                        lineHeight = 40.sp,
-                        color = colors.primaryText
-                    )
-                    Text(
-                        text = subtitle(lang),
-                        fontSize = 13.5.sp,
-                        color = colors.secondaryText
-                    )
-                }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 16.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Text(
+                    text = eyebrow.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 3.sp,
+                    color = colors.accentColor
+                )
+                Text(
+                    text = title,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 36.sp,
+                    lineHeight = 40.sp,
+                    color = colors.primaryText
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 13.5.sp,
+                    color = colors.secondaryText
+                )
             }
 
             // Search bar
@@ -330,7 +309,7 @@ fun PropheticParallelsScreen(navController: NavHostController) {
                             CategoryHeader(category)
                         }
                         items(categoryParallels, key = { it.id }) { parallel ->
-                            ParallelCard(parallel = parallel, lang = lang, direction = direction) {
+                            ParallelCard(parallel = parallel) {
                                 navController.navigate(Routes.parallel(parallel.id))
                             }
                         }
@@ -407,8 +386,6 @@ private fun ParallelCategoryChip(
 @Composable
 private fun ParallelCard(
     parallel: PropheticParallel,
-    lang: CommentaryLanguage,
-    direction: LayoutDirection,
     onClick: () -> Unit
 ) {
     val colors = Theme.colors
@@ -417,66 +394,65 @@ private fun ParallelCard(
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pressable(onClick = onClick)
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pressable(onClick = onClick)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            EmIconChip(icon = sfIcon(parallel.icon))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                EmIconChip(icon = sfIcon(parallel.icon))
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(colors.accentChip)
+                        .border(1.dp, colors.strokeColor, CircleShape)
+                        .padding(horizontal = 9.dp, vertical = 3.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(colors.accentChip)
-                            .border(1.dp, colors.strokeColor, CircleShape)
-                            .padding(horizontal = 9.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = parallel.prophet(lang),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp,
-                            color = colors.accentColor
-                        )
-                    }
                     Text(
-                        text = parallel.situation(lang),
-                        fontFamily = CormorantFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 20.sp,
-                        lineHeight = 24.sp,
-                        color = colors.primaryText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = parallel.connection(lang),
-                        fontSize = 13.sp,
-                        color = colors.secondaryText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "${parallel.verses.size} verse${if (parallel.verses.size == 1) "" else "s"} · ${parallel.category.displayName}",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.tertiaryText
+                        text = parallel.prophet,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        color = colors.accentColor
                     )
                 }
-                Icon(
-                    Icons.Filled.ChevronRight,
-                    contentDescription = null,
-                    tint = colors.tertiaryText,
-                    modifier = Modifier.size(16.dp)
+                Text(
+                    text = parallel.situation,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                    lineHeight = 24.sp,
+                    color = colors.primaryText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = parallel.connection,
+                    fontSize = 13.sp,
+                    color = colors.secondaryText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${parallel.verses.size} verse${if (parallel.verses.size == 1) "" else "s"} · ${parallel.category.displayName}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.tertiaryText
                 )
             }
+            Icon(
+                Icons.Filled.ChevronRight,
+                contentDescription = null,
+                tint = colors.tertiaryText,
+                modifier = Modifier.size(16.dp)
+            )
         }
+
     }
 }

@@ -79,7 +79,6 @@ import com.thaqalayn.app.data.PropheticParallelsManager
 import com.thaqalayn.app.data.PropheticStoriesManager
 import com.thaqalayn.app.model.AhlulBaytNarration
 import com.thaqalayn.app.model.AudioPlayerState
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.ParallelCategory
 import com.thaqalayn.app.model.ParallelVerse
 import com.thaqalayn.app.model.PropheticStory
@@ -87,7 +86,6 @@ import com.thaqalayn.app.model.StoryCategory
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.Verse
 import com.thaqalayn.app.model.VerseWithTafsir
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
@@ -144,21 +142,15 @@ private fun relatedStoryIcon(category: StoryCategory): ImageVector = when (categ
     StoryCategory.WISDOM -> Icons.Filled.Psychology
 }
 
-private fun narrationLabel(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "من أهل البيت (ع)"
-    CommentaryLanguage.URDU -> "اہلِ بیتؑ سے"
-    else -> "From the Ahlul Bayt (a)"
-}
+private val narrationLabel = "From the Ahlul Bayt (a)"
 
 /** Parallel detail: situation + prophet header, narration, key verses, related story (iOS ParallelDetailView). */
 @Composable
 fun ParallelDetailScreen(parallelId: String, navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
     val parallel = remember(parallelId) { PropheticParallelsManager.byId(parallelId) } ?: return
     val relatedStory = remember(parallelId) { parallel.relatedStoryId?.let { PropheticStoriesManager.byId(it) } }
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
@@ -190,66 +182,63 @@ fun ParallelDetailScreen(parallelId: String, navController: NavHostController) {
 
             // Header card: category eyebrow, your situation, prophet + connection
             EmCard(modifier = Modifier.fillMaxWidth()) {
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        EmSectionLabel(icon = parallelCategoryIcon(parallel.category), text = parallel.category.displayName)
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    EmSectionLabel(icon = parallelCategoryIcon(parallel.category), text = parallel.category.displayName)
 
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            EmSectionLabel(icon = sfIcon(parallel.icon), text = "Your Situation")
-                            Text(
-                                text = parallel.situation(lang),
-                                fontFamily = CormorantFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 28.sp,
-                                lineHeight = 34.sp,
-                                color = colors.primaryText
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(colors.dividerColor)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        EmSectionLabel(icon = sfIcon(parallel.icon), text = "Your Situation")
+                        Text(
+                            text = parallel.situation,
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 28.sp,
+                            lineHeight = 34.sp,
+                            color = colors.primaryText
                         )
+                    }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            EmSectionLabel(icon = Icons.Filled.Person, text = "Prophet")
-                            Text(
-                                text = parallel.prophet(lang),
-                                fontFamily = CormorantFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 24.sp,
-                                lineHeight = 28.sp,
-                                color = colors.accentBright
-                            )
-                            Text(
-                                text = parallel.connection(lang),
-                                fontFamily = if (lang == CommentaryLanguage.URDU) AmiriFamily else CormorantFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = (17 * scale).sp,
-                                lineHeight = (17 * scale * 1.5f).sp,
-                                color = colors.primaryText
-                            )
-                        }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(colors.dividerColor)
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        EmSectionLabel(icon = Icons.Filled.Person, text = "Prophet")
+                        Text(
+                            text = parallel.prophet,
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 24.sp,
+                            lineHeight = 28.sp,
+                            color = colors.accentBright
+                        )
+                        Text(
+                            text = parallel.connection,
+                            fontFamily = CormorantFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = (17 * scale).sp,
+                            lineHeight = (17 * scale * 1.5f).sp,
+                            color = colors.primaryText
+                        )
                     }
                 }
+
             }
 
-            parallel.narration?.let { AhlulBaytNarrationCard(narration = it, lang = lang, scale = scale) }
+            parallel.narration?.let { AhlulBaytNarrationCard(narration = it, scale = scale) }
 
             // Key verses
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    EmSectionLabel(icon = Icons.Filled.AutoStories, text = "Key Verses")
-                }
+                EmSectionLabel(icon = Icons.Filled.AutoStories, text = "Key Verses")
+
                 parallel.verses.forEach { parallelVerse ->
                     ParallelVerseCard(
                         parallelVerse = parallelVerse,
-                        lang = lang,
                         scale = scale,
                         onNavigate = {
                             navController.navigate(Routes.surah(parallelVerse.surahNumber, parallelVerse.verseNumber))
@@ -259,7 +248,7 @@ fun ParallelDetailScreen(parallelId: String, navController: NavHostController) {
             }
 
             if (relatedStory != null) {
-                RelatedStoryCard(story = relatedStory, lang = lang, direction = direction) {
+                RelatedStoryCard(story = relatedStory) {
                     navController.navigate(Routes.story(relatedStory.id))
                 }
             }
@@ -272,7 +261,6 @@ fun ParallelDetailScreen(parallelId: String, navController: NavHostController) {
 @Composable
 private fun ParallelVerseCard(
     parallelVerse: ParallelVerse,
-    lang: CommentaryLanguage,
     scale: Float,
     onNavigate: () -> Unit
 ) {
@@ -289,9 +277,6 @@ private fun ParallelVerseCard(
         value = surah to verse
     }
     val surahName = loaded?.first?.englishName ?: "Surah ${parallelVerse.surahNumber}"
-    // Verse translations exist only in English + Urdu; Arabic UI falls back to English.
-    val translationIsRTL = lang == CommentaryLanguage.URDU
-
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -371,52 +356,43 @@ private fun ParallelVerseCard(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides if (translationIsRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                ) {
-                    val translation =
-                        if (translationIsRTL) verse.translationUrdu ?: verse.translation
-                        else verse.translation
-                    Text(
-                        text = translation,
-                        fontFamily = if (translationIsRTL) AmiriFamily else CormorantFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = (16 * scale).sp,
-                        lineHeight = (16 * scale * 1.5f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                                Text(
+                    text = verse.translation,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = (16 * scale).sp,
+                    lineHeight = (16 * scale * 1.5f).sp,
+                    color = colors.secondaryText,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
             }
 
             // Relevance note
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.accentChip.copy(alpha = colors.accentChip.alpha * 0.6f))
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.accentChip.copy(alpha = colors.accentChip.alpha * 0.6f))
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.Outlined.Lightbulb,
-                        contentDescription = null,
-                        tint = colors.accentColor,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Text(
-                        text = parallelVerse.relevanceNote(lang),
-                        fontFamily = if (lang == CommentaryLanguage.URDU) AmiriFamily else null,
-                        fontSize = (13 * scale).sp,
-                        lineHeight = (13 * scale * 1.4f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                Icon(
+                    Icons.Outlined.Lightbulb,
+                    contentDescription = null,
+                    tint = colors.accentColor,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = parallelVerse.relevanceNote,
+                    fontFamily = null,
+                    fontSize = (13 * scale).sp,
+                    lineHeight = (13 * scale * 1.4f).sp,
+                    color = colors.secondaryText,
+                    modifier = Modifier.weight(1f)
+                )
             }
+
         }
     }
 }
@@ -425,8 +401,6 @@ private fun ParallelVerseCard(
 @Composable
 private fun RelatedStoryCard(
     story: PropheticStory,
-    lang: CommentaryLanguage,
-    direction: LayoutDirection,
     onClick: () -> Unit
 ) {
     val colors = Theme.colors
@@ -435,52 +409,51 @@ private fun RelatedStoryCard(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                EmSectionLabel(icon = Icons.Filled.Link, text = "Full Story")
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .pressable(onClick = onClick),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+            EmSectionLabel(icon = Icons.Filled.Link, text = "Full Story")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pressable(onClick = onClick),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                EmIconChip(icon = relatedStoryIcon(story.category), size = 40.dp)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    EmIconChip(icon = relatedStoryIcon(story.category), size = 40.dp)
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = story.prophet(lang),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp,
-                            color = colors.accentColor
-                        )
-                        Text(
-                            text = story.title(lang),
-                            fontFamily = CormorantFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp,
-                            lineHeight = 22.sp,
-                            color = colors.primaryText,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${story.verseCount} verses · Full Quranic account",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = colors.tertiaryText
-                        )
-                    }
-                    Icon(
-                        Icons.Filled.ChevronRight,
-                        contentDescription = null,
-                        tint = colors.tertiaryText,
-                        modifier = Modifier.size(16.dp)
+                    Text(
+                        text = story.prophet,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        color = colors.accentColor
+                    )
+                    Text(
+                        text = story.title,
+                        fontFamily = CormorantFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp,
+                        lineHeight = 22.sp,
+                        color = colors.primaryText,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${story.verseCount} verses · Full Quranic account",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = colors.tertiaryText
                     )
                 }
+                Icon(
+                    Icons.Filled.ChevronRight,
+                    contentDescription = null,
+                    tint = colors.tertiaryText,
+                    modifier = Modifier.size(16.dp)
+                )
             }
+
         }
     }
 }
@@ -488,35 +461,30 @@ private fun RelatedStoryCard(
 // "From the Ahlul Bayt (a)": attributed narration - Arabic + translation + source
 // (iOS AhlulBaytNarrationCard).
 @Composable
-private fun AhlulBaytNarrationCard(narration: AhlulBaytNarration, lang: CommentaryLanguage, scale: Float) {
+private fun AhlulBaytNarrationCard(narration: AhlulBaytNarration, scale: Float) {
     val colors = Theme.colors
-    val isUrdu = lang == CommentaryLanguage.URDU
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.FormatQuote,
-                        contentDescription = null,
-                        tint = colors.accentColor,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Text(
-                        text = narrationLabel(lang).uppercase(),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = if (lang.isRTL) 0.sp else 2.sp,
-                        color = colors.accentColor
-                    )
-                }
+                Icon(
+                    Icons.Filled.FormatQuote,
+                    contentDescription = null,
+                    tint = colors.accentColor,
+                    modifier = Modifier.size(13.dp)
+                )
+                Text(
+                    text = narrationLabel.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp,
+                    color = colors.accentColor
+                )
             }
 
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -529,35 +497,26 @@ private fun AhlulBaytNarrationCard(narration: AhlulBaytNarration, lang: Commenta
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+            Text(
+                text = narration.translation,
+                fontFamily = CormorantFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = (16 * scale).sp,
+                lineHeight = (16 * scale * 1.5f).sp,
+                color = colors.secondaryText,
+                modifier = Modifier.fillMaxWidth()
+            )
 
-            // Arabic readers read the narration itself; show a translation only otherwise.
-            if (lang != CommentaryLanguage.ARABIC) {
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides if (isUrdu) LayoutDirection.Rtl else LayoutDirection.Ltr
-                ) {
-                    Text(
-                        text = narration.translation(lang),
-                        fontFamily = if (isUrdu) AmiriFamily else CormorantFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = (16 * scale).sp,
-                        lineHeight = (16 * scale * 1.5f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
+        
 
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-            ) {
-                Text(
-                    text = narration.source(lang),
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.accentColor,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            Text(
+                text = narration.source,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.accentColor,
+                modifier = Modifier.fillMaxWidth()
+            )
+
         }
     }
 }

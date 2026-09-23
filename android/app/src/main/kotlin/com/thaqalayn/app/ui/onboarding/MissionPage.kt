@@ -196,7 +196,7 @@ private fun Wordmark(isVisible: Boolean) {
     }
 }
 
-// MARK: - Beat row (gold verb + serif-italic line)
+// MARK: - Beat row (gold verb + serif line)
 
 @Composable
 private fun BeatRow(beat: Beat) {
@@ -208,11 +208,13 @@ private fun BeatRow(beat: Beat) {
             maxLines = 1,
             modifier = Modifier.width(132.dp)
         )
+        // Upright SemiBold in full cream (iOS 9.0): the italic line was too thin to
+        // read on the near-black ground.
         Text(
             text = beat.line,
-            style = onbSerifItalic(20),
+            style = onbSerif(20),
             lineHeight = 26.sp,
-            color = OnbPalette.cream.copy(alpha = 0.88f),
+            color = OnbPalette.cream,
             modifier = Modifier.weight(1f)
         )
     }

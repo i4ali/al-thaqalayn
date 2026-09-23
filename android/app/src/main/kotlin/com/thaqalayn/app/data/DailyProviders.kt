@@ -9,8 +9,6 @@ import com.thaqalayn.app.model.DailyChallenge
 import com.thaqalayn.app.model.DailyCrossword
 import com.thaqalayn.app.model.DailyDua
 import com.thaqalayn.app.model.DailyDuasData
-import com.thaqalayn.app.model.DailyMessage
-import com.thaqalayn.app.model.DailyMessagesData
 import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -42,30 +40,48 @@ private fun resolveDailyIndex(prefs: SharedPreferences, cacheKey: String, count:
     return index
 }
 
-/** Loads daily_messages.json and returns today's verse deterministically. */
-object DailyMessageProvider {
-    private lateinit var prefs: SharedPreferences
-    private var messages: List<DailyMessage> = emptyList()
+/**
+ * Today's verse from the 365-verse themed pool (iOS DailyVerseProvider). Selection
+ * is a pure function of the date (see DailyVerseSelector), so the Today hero and
+ * the daily-verse notification always agree and nothing needs caching.
+ */
+object DailyVerseProvider {
+    private val lock = Any()
+    @Volatile
+    private var selector: DailyVerseSelector? = null
 
-    var today by mutableStateOf<DailyMessage?>(null)
+    var today by mutableStateOf<DailyVerseSelection?>(null)
         private set
 
     fun init(context: Context) {
-        prefs = context.getSharedPreferences("thaqalayn_daily", Context.MODE_PRIVATE)
-        messages = try {
-            val text = context.assets.open("daily_messages.json").bufferedReader().use { it.readText() }
-            json.decodeFromString<DailyMessagesData>(text).messages
-        } catch (e: Exception) {
-            emptyList()
-        }
+        loadIfNeeded(context)
         refreshIfDayChanged()
     }
 
+    /** Parse daily_verses.json once; workers may call this before the app's init thread has. */
+    fun loadIfNeeded(context: Context) {
+        if (selector != null) return
+        synchronized(lock) {
+            if (selector != null) return
+            selector = try {
+                val text = context.assets.open("daily_verses.json").bufferedReader().use { it.readText() }
+                DailyVerseSelector(json.decodeFromString<DailyVersePool>(text))
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    /** The verse for any date; null only if the pool failed to load. */
+    fun verseFor(date: Date): DailyVerseSelection? {
+        val s = selector ?: return null
+        return synchronized(lock) { s.verseFor(date) }
+    }
+
+    /** Called when the Today tab appears, so a day boundary crossed in the background shows. */
     fun refreshIfDayChanged() {
-        if (messages.isEmpty()) return
-        val index = resolveDailyIndex(prefs, "ThaqalaynDailyMessageCache", messages.size)
-        val resolved = messages[index]
-        if (resolved.id != today?.id) today = resolved
+        val resolved = verseFor(Date()) ?: return
+        if (resolved != today) today = resolved
     }
 }
 

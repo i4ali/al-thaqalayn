@@ -13,9 +13,6 @@ import com.thaqalayn.app.data.IslamicCalendarManager
 import com.thaqalayn.app.data.JourneyAnnouncement
 import com.thaqalayn.app.data.ProgressManager
 import com.thaqalayn.app.data.journeyScheduleDecision
-import com.thaqalayn.app.model.DailyVerseEntry
-import com.thaqalayn.app.model.IslamicMonth
-import com.thaqalayn.app.model.IslamicMonthVerseData
 import com.thaqalayn.app.model.NotificationPreferences
 import com.thaqalayn.app.model.NotificationType
 import kotlinx.serialization.json.Json
@@ -48,10 +45,6 @@ object NotificationManager {
     var preferences by mutableStateOf(NotificationPreferences())
         private set
 
-    /** Parsed islamic_month_verses.json; loaded on the app's background init thread. */
-    @Volatile
-    private var verseData: IslamicMonthVerseData? = null
-
     fun init(context: Context) {
         appContext = context.applicationContext
         prefs = appContext.getSharedPreferences("thaqalayn_notifications", Context.MODE_PRIVATE)
@@ -66,22 +59,6 @@ object NotificationManager {
         } ?: NotificationPreferences()
     }
 
-    /** Workers may fire before the Application background thread finishes parsing. */
-    fun loadVerseDataIfNeeded(context: Context) {
-        if (verseData == null) loadVerseData(context)
-    }
-
-    /** Heavy part of init - JSON parse; call from the Application background thread. */
-    fun loadVerseData(context: Context) {
-        verseData = try {
-            val text = context.assets.open("islamic_month_verses.json")
-                .bufferedReader().use { it.readText() }
-            json.decodeFromString<IslamicMonthVerseData>(text)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     // MARK: - Preferences
 
     /** iOS preferences.didSet: persist, then re-time dailies AND seasonal one-shots. */
@@ -92,25 +69,6 @@ object NotificationManager {
     }
 
     fun hasPermission(): Boolean = NotificationPoster.hasPermission(appContext)
-
-    // MARK: - Verse Selection
-
-    /** Select today's verse based on the Islamic calendar. */
-    fun selectTodayVerse(): DailyVerseEntry? {
-        val data = verseData ?: return null
-        val monthNumber = IslamicCalendarManager.currentIslamicMonth()
-        val dayOfMonth = IslamicCalendarManager.currentIslamicDay()
-        val monthData = data.months.firstOrNull { it.month == monthNumber } ?: return null
-        // Rotate through verses using day of month.
-        return monthData.verses[(dayOfMonth - 1) % monthData.verses.size]
-    }
-
-    /** Islamic month data for the current month. */
-    fun currentMonthData(): IslamicMonth? {
-        val data = verseData ?: return null
-        val monthNumber = IslamicCalendarManager.currentIslamicMonth()
-        return data.months.firstOrNull { it.month == monthNumber }
-    }
 
     // MARK: - Lifecycle Refresh
 

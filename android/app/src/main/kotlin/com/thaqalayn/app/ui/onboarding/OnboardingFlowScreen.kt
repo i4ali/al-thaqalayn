@@ -1,7 +1,8 @@
 package com.thaqalayn.app.ui.onboarding
 
 // Story-driven onboarding flow coordinator (iOS OnboardingFlowView).
-// 13 swipeable pages with a dot indicator, a Skip pill on the middle pages,
+// 12 swipeable pages with a dot indicator (iOS 9.0 order: Understanding in,
+// Five Layers and Quiz out; no widget page, Android has no widgets), a Skip pill on the middle pages,
 // and completion that applies the notification opt-ins collected along the way
 // (requesting POST_NOTIFICATIONS first when needed) before marking
 // hasShownWelcome - the same sequence as iOS completeOnboarding().
@@ -43,7 +44,7 @@ import com.thaqalayn.app.settings.OnboardingManager
 import com.thaqalayn.app.ui.components.pressable
 import kotlinx.coroutines.launch
 
-private const val TOTAL_PAGES = 13
+private const val TOTAL_PAGES = 12
 
 @Composable
 fun OnboardingFlowScreen() {
@@ -98,23 +99,22 @@ fun OnboardingFlowScreen() {
                     onAdvance = { scope.launch { pagerState.animateScrollToPage(1) } }
                 )
                 1 -> MissionPage()
-                2 -> DeepDiveTeaserPage()
-                3 -> SurahExperienceTeaserPage()
-                4 -> FiveLayersPage()
+                2 -> UnderstandingPage()
+                3 -> DeepDiveTeaserPage()
+                4 -> SurahExperienceTeaserPage()
                 5 -> QuickGemsPage()
-                6 -> ProgressTrackingPage()
-                7 -> QuizFeaturePage()
-                8 -> SeasonalFeaturesPage()
-                9 -> DailyVersePage(
+                6 -> ProgressTrackingPage(isActive = pagerState.currentPage == 6)
+                7 -> SeasonalFeaturesPage()
+                8 -> DailyVersePage(
                     notificationsEnabled = notificationsEnabled,
                     onToggle = { notificationsEnabled = !notificationsEnabled }
                 )
-                10 -> ProgressNotificationsPage(
+                9 -> ProgressNotificationsPage(
                     progressNotificationsEnabled = progressNotificationsEnabled,
                     onToggle = { progressNotificationsEnabled = !progressNotificationsEnabled }
                 )
-                11 -> PersonalizePage(
-                    onContinue = { scope.launch { pagerState.animateScrollToPage(12) } }
+                10 -> PersonalizePage(
+                    onContinue = { scope.launch { pagerState.animateScrollToPage(11) } }
                 )
                 else -> FinalPage(onComplete = { completeOnboarding() })
             }

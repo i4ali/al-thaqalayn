@@ -9,7 +9,7 @@ import com.thaqalayn.app.data.DailyChallengeProvider
 import com.thaqalayn.app.data.DailyCrosswordManager
 import com.thaqalayn.app.data.DailyCrosswordProvider
 import com.thaqalayn.app.data.AhlulbaytQuranManager
-import com.thaqalayn.app.data.DailyMessageProvider
+import com.thaqalayn.app.data.DailyVerseProvider
 import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.data.DuasManager
 import com.thaqalayn.app.data.SpecialDuasManager
@@ -21,7 +21,10 @@ import com.thaqalayn.app.data.LifeMomentsManager
 import com.thaqalayn.app.data.PropheticParallelsManager
 import com.thaqalayn.app.data.PropheticStoriesManager
 import com.thaqalayn.app.data.ProgressManager
-import com.thaqalayn.app.data.QuizManager
+import com.thaqalayn.app.data.PassageStageStore
+import com.thaqalayn.app.data.PassageStore
+import com.thaqalayn.app.data.QuizResultsStore
+import com.thaqalayn.app.data.QuizStore
 import com.thaqalayn.app.notifications.NotificationManager
 import com.thaqalayn.app.premium.BillingManager
 import com.thaqalayn.app.premium.PremiumManager
@@ -39,7 +42,10 @@ class ThaqalaynApplication : Application() {
         ReadingSettingsManager.init(this)
         CommentaryLanguageManager.init(this)
         ProgressManager.init(this)
-        QuizManager.init(this)
+        PassageStore.init(this)
+        QuizStore.init(this)
+        QuizResultsStore.init(this)
+        PassageStageStore.init(this)
         BookmarkManager.init(this)
         PremiumManager.init(this)
         BillingManager.init(this)
@@ -51,12 +57,12 @@ class ThaqalaynApplication : Application() {
         DailyCrosswordManager.init(this)
         JourneyManagers.init(this)
         NotificationManager.init(this)
-        // The daily-content JSON parses (365 challenges, crosswords, duas, messages)
+        // The daily-content JSON parses (365 verses, challenges, crosswords, duas)
         // are too heavy for Application.onCreate on the main thread; Compose state
         // writes are snapshot-safe from a background thread and the Today tab
         // renders each card as its provider comes online.
         Thread {
-            DailyMessageProvider.init(this)
+            DailyVerseProvider.init(this)
             DailyChallengeProvider.init(this)
             DailyCrosswordProvider.init(this)
             DuasManager.init(this)
@@ -69,7 +75,6 @@ class ThaqalaynApplication : Application() {
             AhlulbaytQuranManager.init(this)
             FastingVersesManager.init(this)
             JourneyManagers.loadDays(this)
-            NotificationManager.loadVerseData(this)
         }.start()
     }
 }

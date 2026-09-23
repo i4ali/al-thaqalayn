@@ -49,12 +49,10 @@ import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.data.FastingVersesManager
 import com.thaqalayn.app.model.AhlulBaytNarration
 import com.thaqalayn.app.model.AudioPlayerState
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.FastingVerse
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.Verse
 import com.thaqalayn.app.model.VerseWithTafsir
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.EmCard
@@ -77,26 +75,16 @@ private fun sfIcon(name: String): ImageVector = when (name) {
     else -> Icons.AutoMirrored.Filled.MenuBook
 }
 
-private fun fastingEyebrow(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "الصيام في القرآن"
-    CommentaryLanguage.URDU -> "قرآن میں روزہ"
-    else -> "Fasting in the Quran"
-}
+private val fastingEyebrow = "Fasting in the Quran"
 
-private fun narrationLabel(language: CommentaryLanguage): String = when (language) {
-    CommentaryLanguage.ARABIC -> "من أهل البيت (ع)"
-    CommentaryLanguage.URDU -> "اہلِ بیتؑ سے"
-    else -> "From the Ahlul Bayt (a)"
-}
+private val narrationLabel = "From the Ahlul Bayt (a)"
 
 /** Fasting category detail: header, optional narration, verses (iOS FastingCategoryDetailView). */
 @Composable
 fun FastingCategoryDetailScreen(categoryId: String, navController: NavHostController) {
     val colors = Theme.colors
-    val lang = CommentaryLanguageManager.selectedLanguage
     val scale = ReadingSettingsManager.scale
     val category = remember(categoryId) { FastingVersesManager.byId(categoryId) } ?: return
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
@@ -128,74 +116,71 @@ fun FastingCategoryDetailScreen(categoryId: String, navController: NavHostContro
 
             // Category header card
             EmCard(modifier = Modifier.fillMaxWidth()) {
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        EmIconChip(icon = sfIcon(category.icon), size = 56.dp)
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(5.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            EmIconChip(icon = sfIcon(category.icon), size = 56.dp)
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(5.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = fastingEyebrow(lang).uppercase(),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = if (lang.isRTL) 0.sp else 3.sp,
-                                    color = colors.accentColor
-                                )
-                                Text(
-                                    text = category.title(lang),
-                                    fontFamily = CormorantFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 28.sp,
-                                    lineHeight = 32.sp,
-                                    color = colors.primaryText
-                                )
-                                Text(
-                                    text = "${category.verseCount} verse" + if (category.verseCount == 1) "" else "s",
-                                    fontSize = 13.sp,
-                                    color = colors.secondaryText
-                                )
-                            }
+                            Text(
+                                text = fastingEyebrow.uppercase(),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 3.sp,
+                                color = colors.accentColor
+                            )
+                            Text(
+                                text = category.title,
+                                fontFamily = CormorantFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 28.sp,
+                                lineHeight = 32.sp,
+                                color = colors.primaryText
+                            )
+                            Text(
+                                text = "${category.verseCount} verse" + if (category.verseCount == 1) "" else "s",
+                                fontSize = 13.sp,
+                                color = colors.secondaryText
+                            )
                         }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(colors.dividerColor)
-                        )
-                        Text(
-                            text = category.description(lang),
-                            fontFamily = if (lang == CommentaryLanguage.URDU) AmiriFamily else CormorantFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = (16 * scale).sp,
-                            lineHeight = (16 * scale * 1.5f).sp,
-                            color = colors.primaryText,
-                            modifier = Modifier.fillMaxWidth()
-                        )
                     }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(colors.dividerColor)
+                    )
+                    Text(
+                        text = category.description,
+                        fontFamily = CormorantFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = (16 * scale).sp,
+                        lineHeight = (16 * scale * 1.5f).sp,
+                        color = colors.primaryText,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
+
             }
 
-            category.narration?.let { AhlulBaytNarrationCard(narration = it, lang = lang, scale = scale) }
+            category.narration?.let { AhlulBaytNarrationCard(narration = it, scale = scale) }
 
             // Verses section
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                    EmSectionLabel(icon = Icons.Filled.AutoStories, text = "Verses")
-                }
+                EmSectionLabel(icon = Icons.Filled.AutoStories, text = "Verses")
+
                 category.verses.forEachIndexed { index, fastingVerse ->
                     FastingVerseCard(
                         fastingVerse = fastingVerse,
                         index = index + 1,
                         totalVerses = category.verseCount,
-                        lang = lang,
                         scale = scale,
                         onNavigate = {
                             navController.navigate(Routes.surah(fastingVerse.surahNumber, fastingVerse.verseNumber))
@@ -214,7 +199,6 @@ private fun FastingVerseCard(
     fastingVerse: FastingVerse,
     index: Int,
     totalVerses: Int,
-    lang: CommentaryLanguage,
     scale: Float,
     onNavigate: () -> Unit
 ) {
@@ -231,9 +215,6 @@ private fun FastingVerseCard(
         value = surah to verse
     }
     val surahName = loaded?.first?.englishName ?: "Surah ${fastingVerse.surahNumber}"
-    // Verse translations exist only in English + Urdu; Arabic UI falls back to English.
-    val translationIsRTL = lang == CommentaryLanguage.URDU
-
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -323,51 +304,41 @@ private fun FastingVerseCard(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides if (translationIsRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                ) {
-                    val translation =
-                        if (translationIsRTL) verse.translationUrdu ?: verse.translation
-                        else verse.translation
-                    Text(
-                        text = translation,
-                        fontFamily = if (translationIsRTL) AmiriFamily else CormorantFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = (16 * scale).sp,
-                        lineHeight = (16 * scale * 1.5f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                                Text(
+                    text = verse.translation,
+                    fontFamily = CormorantFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = (16 * scale).sp,
+                    lineHeight = (16 * scale * 1.5f).sp,
+                    color = colors.secondaryText,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
             }
 
             // Relevance note
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.accentChip.copy(alpha = colors.accentChip.alpha * 0.6f))
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.accentChip.copy(alpha = colors.accentChip.alpha * 0.6f))
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.Outlined.ChatBubbleOutline,
-                        contentDescription = null,
-                        tint = colors.accentColor,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Text(
-                        text = fastingVerse.relevanceNote(lang),
-                        fontFamily = if (lang == CommentaryLanguage.URDU) AmiriFamily else null,
-                        fontSize = (13 * scale).sp,
-                        lineHeight = (13 * scale * 1.4f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                Icon(
+                    Icons.Outlined.ChatBubbleOutline,
+                    contentDescription = null,
+                    tint = colors.accentColor,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = fastingVerse.relevanceNote,
+                    fontFamily = null,
+                    fontSize = (13 * scale).sp,
+                    lineHeight = (13 * scale * 1.4f).sp,
+                    color = colors.secondaryText,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             EmGoldCTA(
@@ -383,35 +354,30 @@ private fun FastingVerseCard(
 // "From the Ahlul Bayt (a)": attributed narration - Arabic + translation + source
 // (iOS AhlulBaytNarrationCard).
 @Composable
-private fun AhlulBaytNarrationCard(narration: AhlulBaytNarration, lang: CommentaryLanguage, scale: Float) {
+private fun AhlulBaytNarrationCard(narration: AhlulBaytNarration, scale: Float) {
     val colors = Theme.colors
-    val isUrdu = lang == CommentaryLanguage.URDU
     EmCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.FormatQuote,
-                        contentDescription = null,
-                        tint = colors.accentColor,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Text(
-                        text = narrationLabel(lang).uppercase(),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = if (lang.isRTL) 0.sp else 2.sp,
-                        color = colors.accentColor
-                    )
-                }
+                Icon(
+                    Icons.Filled.FormatQuote,
+                    contentDescription = null,
+                    tint = colors.accentColor,
+                    modifier = Modifier.size(13.dp)
+                )
+                Text(
+                    text = narrationLabel.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp,
+                    color = colors.accentColor
+                )
             }
 
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -424,35 +390,26 @@ private fun AhlulBaytNarrationCard(narration: AhlulBaytNarration, lang: Commenta
                     modifier = Modifier.fillMaxWidth()
                 )
             }
+            Text(
+                text = narration.translation,
+                fontFamily = CormorantFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = (16 * scale).sp,
+                lineHeight = (16 * scale * 1.5f).sp,
+                color = colors.secondaryText,
+                modifier = Modifier.fillMaxWidth()
+            )
 
-            // Arabic readers read the narration itself; show a translation only otherwise.
-            if (lang != CommentaryLanguage.ARABIC) {
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides if (isUrdu) LayoutDirection.Rtl else LayoutDirection.Ltr
-                ) {
-                    Text(
-                        text = narration.translation(lang),
-                        fontFamily = if (isUrdu) AmiriFamily else CormorantFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = (16 * scale).sp,
-                        lineHeight = (16 * scale * 1.5f).sp,
-                        color = colors.secondaryText,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
+        
 
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-            ) {
-                Text(
-                    text = narration.source(lang),
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.accentColor,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            Text(
+                text = narration.source,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.accentColor,
+                modifier = Modifier.fillMaxWidth()
+            )
+
         }
     }
 }

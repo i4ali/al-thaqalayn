@@ -12,6 +12,9 @@ import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -32,7 +35,6 @@ import com.thaqalayn.app.data.DeepDiveDescriptor
 import com.thaqalayn.app.data.ProgressManager
 import com.thaqalayn.app.premium.PremiumManager
 import com.thaqalayn.app.data.SurahExperienceDescriptor
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.OnboardingManager
 import com.thaqalayn.app.ui.bookmarks.BookmarksScreen
 import com.thaqalayn.app.ui.onboarding.OnboardingFlowScreen
@@ -46,15 +48,16 @@ import com.thaqalayn.app.ui.journey.JourneyDayDetailScreen
 import com.thaqalayn.app.ui.journey.JourneyHubScreen
 import com.thaqalayn.app.ui.journey.JourneyScreen
 import com.thaqalayn.app.ui.journey.VeiledDayPreviewScreen
+import com.thaqalayn.app.ui.passages.PassageHubScreen
+import com.thaqalayn.app.ui.passages.PassageQuizScreen
+import com.thaqalayn.app.ui.passages.PassageScreen
+import com.thaqalayn.app.ui.passages.SurahPassagesScreen
+import com.thaqalayn.app.ui.passages.UnderstandingScreen
 import com.thaqalayn.app.ui.paywall.PaywallScreen
 import com.thaqalayn.app.ui.progress.ProgressScreen
-import com.thaqalayn.app.ui.quiz.QuizScreen
-import com.thaqalayn.app.ui.reader.FullScreenCommentaryScreen
-import com.thaqalayn.app.ui.reader.SurahDetailScreen
 import com.thaqalayn.app.ui.reader.VerseSummaryScreen
 import com.thaqalayn.app.ui.notifications.NotificationsScreen
 import com.thaqalayn.app.ui.settings.SettingsScreen
-import com.thaqalayn.app.ui.settings.TafsirSourcesScreen
 import com.thaqalayn.app.ui.strings.TabStrings
 import com.thaqalayn.app.ui.dua.DuaDetailScreen
 import com.thaqalayn.app.ui.dua.DuasZiyaratScreen
@@ -81,9 +84,14 @@ import com.thaqalayn.app.ui.today.TodayScreen
 
 object Routes {
     const val MAIN = "main"
-    const val SURAH = "surah/{number}?verse={verse}"
-    const val COMMENTARY = "commentary/{surah}/{verse}"
+    const val SURAH = "surah/{number}?verse={verse}&passage={passage}"
     const val SUMMARY = "summary/{surah}/{verse}"
+
+    // Passage reader (iOS 8.6 to 9.4): list -> hub -> read / understand / test.
+    const val PASSAGE_HUB = "passageHub/{surah}/{index}"
+    const val PASSAGE = "passage/{surah}/{index}?verse={verse}"
+    const val UNDERSTANDING = "understanding/{surah}/{index}?target={target}"
+    const val PASSAGE_QUIZ = "passageQuiz/{surah}/{index}"
     const val BOOKMARKS = "bookmarks"
     const val SETTINGS = "settings"
     const val NOTIFICATIONS = "notifications"
@@ -92,7 +100,6 @@ object Routes {
     const val CROSSWORD = "crossword"
     const val DUA = "dua/{id}"
     const val SPECIAL_DUA = "specialDua/{id}"
-    const val QUIZ = "quiz/{surah}"
 
     // Explore tab destinations
     const val DUAS = "duas"
@@ -109,7 +116,6 @@ object Routes {
     const val PARALLEL = "parallel/{id}"
     const val AHLULBAYT = "ahlulbayt"
     const val AHLULBAYT_ENTRY = "ahlulbaytEntry/{id}"
-    const val TAFSIR_SOURCES = "tafsirSources"
 
     // Journey tab destinations
     const val JOURNEYS_ALL = "journeysAll"
@@ -121,8 +127,21 @@ object Routes {
     const val SURAH_EXPERIENCES_ALL = "surahExperiencesAll"
     const val SURAH_EXPERIENCE = "surahExperience/{id}"
 
-    fun surah(number: Int, verse: Int? = null) =
-        "surah/$number" + (verse?.let { "?verse=$it" } ?: "")
+    /**
+     * A surah's passage list. A [verse] opens the reader for the passage holding it;
+     * a [passage] index opens that passage's hub instead.
+     */
+    fun surah(number: Int, verse: Int? = null, passage: Int? = null): String {
+        val query = listOfNotNull(verse?.let { "verse=$it" }, passage?.let { "passage=$it" })
+        return "surah/$number" + if (query.isEmpty()) "" else query.joinToString("&", prefix = "?")
+    }
+
+    fun passageHub(surah: Int, index: Int) = "passageHub/$surah/$index"
+    fun passage(surah: Int, index: Int, verse: Int? = null) =
+        "passage/$surah/$index" + (verse?.let { "?verse=$it" } ?: "")
+    fun understanding(surah: Int, index: Int, target: String? = null) =
+        "understanding/$surah/$index" + (target?.let { "?target=${android.net.Uri.encode(it)}" } ?: "")
+    fun passageQuiz(surah: Int, index: Int) = "passageQuiz/$surah/$index"
 
     /**
      * Paywall, optionally carrying the locked entry's cover as hero context
@@ -130,8 +149,6 @@ object Routes {
      */
     fun paywall(coverKey: String? = null) =
         "paywall" + (coverKey?.let { "?cover=$it" } ?: "")
-
-    fun quiz(surah: Int) = "quiz/$surah"
 
     fun dua(id: String) = "dua/$id"
     fun specialDua(id: String) = "specialDua/$id"
@@ -170,12 +187,16 @@ fun AppRoot() {
         if (pendingDeepLink != null) NotificationDeepLinks.clear()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AppNavHost(navController)
-        // First-launch onboarding drawn over the app (iOS fullScreenCover);
-        // completion flips hasShownWelcome and reveals the app beneath.
-        if (!OnboardingManager.hasShownWelcome) {
-            OnboardingFlowScreen()
+    // The UI is English only (iOS b1aa5b7), so it lays out left to right even on
+    // a right-to-left device locale; Arabic text blocks set RTL themselves.
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AppNavHost(navController)
+            // First-launch onboarding drawn over the app (iOS fullScreenCover);
+            // completion flips hasShownWelcome and reveals the app beneath.
+            if (!OnboardingManager.hasShownWelcome) {
+                OnboardingFlowScreen()
+            }
         }
     }
 }
@@ -193,27 +214,70 @@ private fun AppNavHost(navController: NavHostController) {
             route = Routes.SURAH,
             arguments = listOf(
                 navArgument("number") { type = NavType.IntType },
-                navArgument("verse") { type = NavType.IntType; defaultValue = -1 }
+                navArgument("verse") { type = NavType.IntType; defaultValue = -1 },
+                navArgument("passage") { type = NavType.IntType; defaultValue = -1 }
             )
         ) { entry ->
-            val number = entry.arguments?.getInt("number") ?: 1
-            val verse = entry.arguments?.getInt("verse")?.takeIf { it > 0 }
-            SurahDetailScreen(
-                surahNumber = number,
-                targetVerse = verse,
+            SurahPassagesScreen(
+                surahNumber = entry.arguments?.getInt("number") ?: 1,
+                targetVerse = entry.arguments?.getInt("verse")?.takeIf { it > 0 },
+                targetPassageIndex = entry.arguments?.getInt("passage")?.takeIf { it > 0 },
                 navController = navController
             )
         }
         composable(
-            route = Routes.COMMENTARY,
+            route = Routes.PASSAGE_HUB,
             arguments = listOf(
                 navArgument("surah") { type = NavType.IntType },
-                navArgument("verse") { type = NavType.IntType }
+                navArgument("index") { type = NavType.IntType }
             )
         ) { entry ->
-            FullScreenCommentaryScreen(
+            PassageHubScreen(
                 surahNumber = entry.arguments?.getInt("surah") ?: 1,
-                verseNumber = entry.arguments?.getInt("verse") ?: 1,
+                passageIndex = entry.arguments?.getInt("index") ?: 1,
+                navController = navController
+            )
+        }
+        composable(
+            route = Routes.PASSAGE,
+            arguments = listOf(
+                navArgument("surah") { type = NavType.IntType },
+                navArgument("index") { type = NavType.IntType },
+                navArgument("verse") { type = NavType.IntType; defaultValue = -1 }
+            )
+        ) { entry ->
+            PassageScreen(
+                surahNumber = entry.arguments?.getInt("surah") ?: 1,
+                passageIndex = entry.arguments?.getInt("index") ?: 1,
+                scrollToVerse = entry.arguments?.getInt("verse")?.takeIf { it > 0 },
+                navController = navController
+            )
+        }
+        composable(
+            route = Routes.UNDERSTANDING,
+            arguments = listOf(
+                navArgument("surah") { type = NavType.IntType },
+                navArgument("index") { type = NavType.IntType },
+                navArgument("target") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) { entry ->
+            UnderstandingScreen(
+                surahNumber = entry.arguments?.getInt("surah") ?: 1,
+                passageIndex = entry.arguments?.getInt("index") ?: 1,
+                scrollTarget = entry.arguments?.getString("target"),
+                navController = navController
+            )
+        }
+        composable(
+            route = Routes.PASSAGE_QUIZ,
+            arguments = listOf(
+                navArgument("surah") { type = NavType.IntType },
+                navArgument("index") { type = NavType.IntType }
+            )
+        ) { entry ->
+            PassageQuizScreen(
+                surahNumber = entry.arguments?.getInt("surah") ?: 1,
+                passageIndex = entry.arguments?.getInt("index") ?: 1,
                 navController = navController
             )
         }
@@ -238,9 +302,6 @@ private fun AppNavHost(navController: NavHostController) {
         }
         composable(Routes.NOTIFICATIONS) {
             NotificationsScreen(navController)
-        }
-        composable(Routes.TAFSIR_SOURCES) {
-            TafsirSourcesScreen(navController)
         }
         composable(Routes.JOURNEYS_ALL) {
             AllJourneysScreen(navController)
@@ -363,15 +424,6 @@ private fun AppNavHost(navController: NavHostController) {
         composable(Routes.CHALLENGE) {
             DailyChallengeScreen(navController)
         }
-        composable(
-            route = Routes.QUIZ,
-            arguments = listOf(navArgument("surah") { type = NavType.IntType })
-        ) { entry ->
-            QuizScreen(
-                surahNumber = entry.arguments?.getInt("surah") ?: 1,
-                navController = navController
-            )
-        }
         composable(Routes.CROSSWORD) {
             DailyCrosswordScreen(navController)
         }
@@ -453,14 +505,12 @@ private fun AppNavHost(navController: NavHostController) {
 @Composable
 private fun MainTabs(navController: NavHostController) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    val lang = CommentaryLanguageManager.selectedLanguage
-
     val items = listOf(
-        EmeraldTabItem(0, TabStrings.today(lang), Icons.Outlined.WbSunny),
-        EmeraldTabItem(1, TabStrings.quran(lang), Icons.Outlined.MenuBook),
-        EmeraldTabItem(2, TabStrings.explore(lang), Icons.Outlined.AutoAwesome),
-        EmeraldTabItem(3, TabStrings.progress(lang), Icons.Outlined.BarChart),
-        EmeraldTabItem(4, TabStrings.journey(lang), Icons.Outlined.Map)
+        EmeraldTabItem(0, TabStrings.today, Icons.Outlined.WbSunny),
+        EmeraldTabItem(1, TabStrings.quran, Icons.Outlined.MenuBook),
+        EmeraldTabItem(2, TabStrings.explore, Icons.Outlined.AutoAwesome),
+        EmeraldTabItem(3, TabStrings.progress, Icons.Outlined.BarChart),
+        EmeraldTabItem(4, TabStrings.journey, Icons.Outlined.Map)
     )
 
     Box(modifier = Modifier.fillMaxSize()) {

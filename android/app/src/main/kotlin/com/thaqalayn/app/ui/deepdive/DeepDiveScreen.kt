@@ -73,14 +73,12 @@ import com.thaqalayn.app.data.DataManager
 import com.thaqalayn.app.audio.AudioManager
 import com.thaqalayn.app.model.AudioPlayerState
 import com.thaqalayn.app.model.BridgeVerse
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.DeepDive
 import com.thaqalayn.app.model.DeepDiveSection
 import com.thaqalayn.app.model.Depth
 import com.thaqalayn.app.model.Surah
 import com.thaqalayn.app.model.Verse
 import com.thaqalayn.app.model.VerseWithTafsir
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.settings.ReadingSettingsManager
 import com.thaqalayn.app.ui.components.CoverVeil
 import com.thaqalayn.app.ui.components.DuaListenButton
@@ -136,7 +134,6 @@ fun DeepDiveScreen(
     locked: Boolean = false,
     onUnlock: () -> Unit = {}
 ) {
-    val lang = CommentaryLanguageManager.selectedLanguage
     // Non-subscribers preview the opening beats; the veil is the final beat.
     val previewCount = minOf(2, dive.sections.size)
     val pageCount = if (locked) previewCount + 1 else dive.sections.size
@@ -169,7 +166,6 @@ fun DeepDiveScreen(
                 DescentVeilPage(
                     art = coverRes,
                     dive = dive,
-                    lang = lang,
                     show = pagerState.currentPage >= index,
                     onUnlock = onUnlock
                 )
@@ -177,7 +173,7 @@ fun DeepDiveScreen(
             }
             val section = dive.sections[index]
             val show = pagerState.currentPage >= index
-            DivePage(dive, section, show, lang,
+            DivePage(dive, section, show,
                 onReadSurah = onReadSurah,
                 onClose = onClose,
                 openDepths = openDepths,
@@ -243,7 +239,6 @@ private fun DivePage(
     dive: DeepDive,
     section: DeepDiveSection,
     show: Boolean,
-    lang: CommentaryLanguage,
     onReadSurah: (() -> Unit)?,
     onClose: () -> Unit,
     openDepths: Set<Int>,
@@ -264,7 +259,7 @@ private fun DivePage(
                         .padding(horizontal = 30.dp)
                         .padding(top = 58.dp)
                 ) {
-                    PlaceBar(dive, section, show, lang)
+                    PlaceBar(dive, section, show)
                 }
                 Box(
                     modifier = Modifier
@@ -274,31 +269,27 @@ private fun DivePage(
                         .padding(horizontal = 30.dp)
                         .padding(top = 90.dp, bottom = 40.dp)
                 ) {
-                    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-                    androidx.compose.runtime.CompositionLocalProvider(
-                        LocalLayoutDirection provides direction
-                    ) {
-                        when (section) {
-                            is DeepDiveSection.Open -> OpenPage(dive, section, show, lang)
-                            is DeepDiveSection.Orientation -> OrientationPage(dive, section, show, lang)
-                            is DeepDiveSection.Verse -> VersePage(section, show, lang)
-                            is DeepDiveSection.Depths -> DepthsPage(dive, section, show, lang, openDepths, onToggleDepth)
-                            is DeepDiveSection.Act -> ActPage(dive, section, show, lang)
-                            is DeepDiveSection.Narration -> NarrationPage(section, show, lang)
-                            is DeepDiveSection.Response -> ResponsePage(section, show, lang)
-                            is DeepDiveSection.Climax -> ClimaxPage(section, show, lang)
-                            is DeepDiveSection.Refrain -> RefrainPage(section, show, lang)
-                            is DeepDiveSection.ReflectionPrompt -> ReflectionPage(section, show, lang)
-                            is DeepDiveSection.Release -> ReleasePage(section, show, lang)
-                            is DeepDiveSection.Count -> CountPage(section, show, lang)
-                            is DeepDiveSection.Sujud -> SujudPage(section, show, lang)
-                            is DeepDiveSection.Extinguish -> ExtinguishPage(section, show, lang)
-                            is DeepDiveSection.Door -> DoorPage(section, show, lang)
-                            is DeepDiveSection.Salawat -> SalawatPage(section, show, lang)
-                            is DeepDiveSection.Dua -> DuaPage(dive, section, show, lang, saidAmin, onSayAmin, onBeginAgain)
-                            is DeepDiveSection.Closing -> ClosingPage(section, show, lang, onReadSurah, onClose)
-                        }
+                    when (section) {
+                        is DeepDiveSection.Open -> OpenPage(dive, section, show)
+                        is DeepDiveSection.Orientation -> OrientationPage(dive, section, show)
+                        is DeepDiveSection.Verse -> VersePage(section, show)
+                        is DeepDiveSection.Depths -> DepthsPage(dive, section, show, openDepths, onToggleDepth)
+                        is DeepDiveSection.Act -> ActPage(dive, section, show)
+                        is DeepDiveSection.Narration -> NarrationPage(section, show)
+                        is DeepDiveSection.Response -> ResponsePage(section, show)
+                        is DeepDiveSection.Climax -> ClimaxPage(section, show)
+                        is DeepDiveSection.Refrain -> RefrainPage(section, show)
+                        is DeepDiveSection.ReflectionPrompt -> ReflectionPage(section, show)
+                        is DeepDiveSection.Release -> ReleasePage(section, show)
+                        is DeepDiveSection.Count -> CountPage(section, show)
+                        is DeepDiveSection.Sujud -> SujudPage(section, show)
+                        is DeepDiveSection.Extinguish -> ExtinguishPage(section, show)
+                        is DeepDiveSection.Door -> DoorPage(section, show)
+                        is DeepDiveSection.Salawat -> SalawatPage(section, show)
+                        is DeepDiveSection.Dua -> DuaPage(dive, section, show, saidAmin, onSayAmin, onBeginAgain)
+                        is DeepDiveSection.Closing -> ClosingPage(section, show, onReadSurah, onClose)
                     }
+
                 }
             }
         }
@@ -311,26 +302,26 @@ private fun DivePage(
  * The "where am I" label + how many depth dots to fill, per section.
  * null = no bar (cover, orientation, and the movement dividers).
  */
-private fun placeInfo(dive: DeepDive, section: DeepDiveSection, lang: CommentaryLanguage): Pair<String, Int>? =
+private fun placeInfo(dive: DeepDive, section: DeepDiveSection): Pair<String, Int>? =
     when (section) {
         is DeepDiveSection.Open, is DeepDiveSection.Orientation, is DeepDiveSection.Act -> null
         is DeepDiveSection.ReflectionPrompt -> "The Return" to dive.acts.size
         is DeepDiveSection.Dua, is DeepDiveSection.Closing -> "The Close" to dive.acts.size
-        is DeepDiveSection.Release -> section.tag.text(lang) to dive.acts.size
-        is DeepDiveSection.Count -> section.tag.text(lang) to dive.acts.size
-        is DeepDiveSection.Sujud -> section.tag.text(lang) to dive.acts.size
-        is DeepDiveSection.Extinguish -> section.tag.text(lang) to dive.acts.size
-        is DeepDiveSection.Door -> section.tag.text(lang) to dive.acts.size
-        is DeepDiveSection.Salawat -> section.tag.text(lang) to dive.acts.size
+        is DeepDiveSection.Release -> section.tag.en to dive.acts.size
+        is DeepDiveSection.Count -> section.tag.en to dive.acts.size
+        is DeepDiveSection.Sujud -> section.tag.en to dive.acts.size
+        is DeepDiveSection.Extinguish -> section.tag.en to dive.acts.size
+        is DeepDiveSection.Door -> section.tag.en to dive.acts.size
+        is DeepDiveSection.Salawat -> section.tag.en to dive.acts.size
         else -> {
             val a = section.actNumber
-            dive.actInfo(a)?.let { info -> "Movement ${roman(a)} · ${info.name.text(lang)}" to a }
+            dive.actInfo(a)?.let { info -> "Movement ${roman(a)} · ${info.name.en}" to a }
         }
     }
 
 @Composable
-private fun PlaceBar(dive: DeepDive, section: DeepDiveSection, show: Boolean, lang: CommentaryLanguage) {
-    val info = placeInfo(dive, section, lang) ?: return
+private fun PlaceBar(dive: DeepDive, section: DeepDiveSection, show: Boolean) {
+    val info = placeInfo(dive, section) ?: return
     Reveal(show) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -530,12 +521,12 @@ private fun VerseRecitation(surahNumber: Int, ayah: Int, show: Boolean) {
 // MARK: - Renderers
 
 @Composable
-private fun OpenPage(dive: DeepDive, s: DeepDiveSection.Open, show: Boolean, lang: CommentaryLanguage) {
+private fun OpenPage(dive: DeepDive, s: DeepDiveSection.Open, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Reveal(show) {
             Text(
-                text = s.kicker.text(lang).uppercase(),
+                text = s.kicker.en.uppercase(),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 letterSpacing = 6.sp,
@@ -550,7 +541,7 @@ private fun OpenPage(dive: DeepDive, s: DeepDiveSection.Open, show: Boolean, lan
         Spacer(modifier = Modifier.height(8.dp))
         Reveal(show, 0.5) {
             Text(
-                text = s.subtitle.text(lang).uppercase(),
+                text = s.subtitle.en.uppercase(),
                 fontSize = 12.sp,
                 letterSpacing = 5.sp,
                 textAlign = TextAlign.Center,
@@ -560,7 +551,7 @@ private fun OpenPage(dive: DeepDive, s: DeepDiveSection.Open, show: Boolean, lan
         Reveal(show, 0.78) { Box(modifier = Modifier.padding(vertical = 30.dp)) { Hairline() } }
         Reveal(show, 0.78) {
             SerifText(
-                s.line.text(lang), 18f * scale, Color(0xFFB8B8B8), italic = true,
+                s.line.en, 18f * scale, Color(0xFFB8B8B8), italic = true,
                 lineSpacing = 5f * scale, modifier = Modifier.widthIn(max = 320.dp)
             )
         }
@@ -570,12 +561,12 @@ private fun OpenPage(dive: DeepDive, s: DeepDiveSection.Open, show: Boolean, lan
 }
 
 @Composable
-private fun OrientationPage(dive: DeepDive, s: DeepDiveSection.Orientation, show: Boolean, lang: CommentaryLanguage) {
+private fun OrientationPage(dive: DeepDive, s: DeepDiveSection.Orientation, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Reveal(show) {
             Text(
-                text = s.eyebrow.text(lang).uppercase(),
+                text = s.eyebrow.en.uppercase(),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 4.sp,
@@ -586,7 +577,7 @@ private fun OrientationPage(dive: DeepDive, s: DeepDiveSection.Orientation, show
         Spacer(modifier = Modifier.height(20.dp))
         Reveal(show, 0.2) {
             SerifText(
-                s.promise.text(lang), 22f * scale, DeepDivePalette.cream, italic = true,
+                s.promise.en, 22f * scale, DeepDivePalette.cream, italic = true,
                 lineSpacing = 5f * scale, modifier = Modifier.widthIn(max = 320.dp)
             )
         }
@@ -601,7 +592,7 @@ private fun OrientationPage(dive: DeepDive, s: DeepDiveSection.Orientation, show
         Spacer(modifier = Modifier.height(26.dp))
         Reveal(show, 0.7) {
             Text(
-                text = s.leaveWith.text(lang),
+                text = s.leaveWith.en,
                 fontSize = 13.sp * scale,
                 lineHeight = 17.sp * scale,
                 textAlign = TextAlign.Center,
@@ -623,15 +614,15 @@ private fun HintRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text:
 }
 
 @Composable
-private fun VersePage(s: DeepDiveSection.Verse, show: Boolean, lang: CommentaryLanguage) {
+private fun VersePage(s: DeepDiveSection.Verse, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        TagLabel(s.tag.text(lang), show)
+        TagLabel(s.tag.en, show)
         Spacer(modifier = Modifier.height(30.dp))
         Reveal(show, 0.24) {
             ArabicText(s.arabic, 26f * scale, DeepDivePalette.cream, lineSpacing = 14f * scale)
         }
-        val translation = s.translation.text(lang)
+        val translation = s.translation.en
         if (translation.isNotEmpty()) {
             Spacer(modifier = Modifier.height(26.dp))
             Reveal(show, 0.55) {
@@ -656,7 +647,7 @@ private fun VersePage(s: DeepDiveSection.Verse, show: Boolean, lang: CommentaryL
         }
         Reveal(show, 0.9) {
             Text(
-                text = s.reflection.text(lang),
+                text = s.reflection.en,
                 fontSize = 15.sp * scale,
                 lineHeight = 21.sp * scale,
                 textAlign = TextAlign.Center,
@@ -674,12 +665,11 @@ private fun DepthsPage(
     dive: DeepDive,
     s: DeepDiveSection.Depths,
     show: Boolean,
-    lang: CommentaryLanguage,
     openDepths: Set<Int>,
     onToggleDepth: (Int) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Reveal(show, 0.06) { SerifText(s.tag.text(lang), 28f, DeepDivePalette.cream) }
+        Reveal(show, 0.06) { SerifText(s.tag.en, 28f, DeepDivePalette.cream) }
         Spacer(modifier = Modifier.height(4.dp))
         Reveal(show, 0.12) {
             SerifText(dive.mapLine, 15f, DeepDivePalette.mute, italic = true)
@@ -710,7 +700,7 @@ private fun DepthsPage(
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             s.items.forEachIndexed { di, d ->
                 Reveal(show, 0.3 + di * 0.16) {
-                    DepthCard(di, d, di in openDepths, lang) { onToggleDepth(di) }
+                    DepthCard(di, d, di in openDepths) { onToggleDepth(di) }
                 }
             }
         }
@@ -718,7 +708,7 @@ private fun DepthsPage(
 }
 
 @Composable
-private fun DepthCard(di: Int, d: Depth, open: Boolean, lang: CommentaryLanguage, onTap: () -> Unit) {
+private fun DepthCard(di: Int, d: Depth, open: Boolean, onTap: () -> Unit) {
     val scale = ReadingSettingsManager.scale
     val shape = RoundedCornerShape(16.dp)
     Column(
@@ -738,7 +728,7 @@ private fun DepthCard(di: Int, d: Depth, open: Boolean, lang: CommentaryLanguage
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 SerifText("${roman(di + 1)} · ${d.tr}", 17f, DeepDivePalette.cream, textAlign = TextAlign.Start)
-                Text(text = d.label.text(lang), fontSize = 11.sp, color = DeepDivePalette.mute)
+                Text(text = d.label.en, fontSize = 11.sp, color = DeepDivePalette.mute)
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -758,12 +748,12 @@ private fun DepthCard(di: Int, d: Depth, open: Boolean, lang: CommentaryLanguage
                     .background(DeepDivePalette.gold.copy(alpha = 0.22f))
             )
             SerifText(
-                d.desc.text(lang), 16f * scale, Color(0xFFCCCCCC), italic = true,
+                d.desc.en, 16f * scale, Color(0xFFCCCCCC), italic = true,
                 lineSpacing = 3f * scale, textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                text = "→ ${d.embodies.text(lang)}".uppercase(),
+                text = "→ ${d.embodies.en}".uppercase(),
                 fontSize = 10.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.2.sp,
@@ -775,14 +765,14 @@ private fun DepthCard(di: Int, d: Depth, open: Boolean, lang: CommentaryLanguage
 }
 
 @Composable
-private fun ActPage(dive: DeepDive, s: DeepDiveSection.Act, show: Boolean, lang: CommentaryLanguage) {
+private fun ActPage(dive: DeepDive, s: DeepDiveSection.Act, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     val info = dive.actInfo(s.act)
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         s.connector?.let { connector ->
             Reveal(show) {
                 Text(
-                    text = connector.text(lang),
+                    text = connector.en,
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                     color = DeepDivePalette.mute
@@ -810,7 +800,7 @@ private fun ActPage(dive: DeepDive, s: DeepDiveSection.Act, show: Boolean, lang:
         Spacer(modifier = Modifier.height(8.dp))
         Reveal(show, 0.36) {
             Text(
-                text = "${info?.name?.text(lang) ?: ""} · ${dive.stageNoun} ${s.act} of ${dive.acts.size}".uppercase(),
+                text = "${info?.name?.en ?: ""} · ${dive.stageNoun} ${s.act} of ${dive.acts.size}".uppercase(),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 2.4.sp,
@@ -820,7 +810,7 @@ private fun ActPage(dive: DeepDive, s: DeepDiveSection.Act, show: Boolean, lang:
         }
         s.bridge?.let { b ->
             Spacer(modifier = Modifier.height(26.dp))
-            Reveal(show, 0.6) { BridgeVerseCard(b, lang) }
+            Reveal(show, 0.6) { BridgeVerseCard(b) }
         }
         val lineDelay = if (s.bridge == null) 0.6 else 0.85
         Reveal(show, lineDelay) {
@@ -828,7 +818,7 @@ private fun ActPage(dive: DeepDive, s: DeepDiveSection.Act, show: Boolean, lang:
         }
         Reveal(show, lineDelay) {
             SerifText(
-                s.line.text(lang), 18f * scale, Color(0xFFB8B8B8), italic = true,
+                s.line.en, 18f * scale, Color(0xFFB8B8B8), italic = true,
                 lineSpacing = 5f * scale, modifier = Modifier.widthIn(max = 340.dp)
             )
         }
@@ -838,7 +828,7 @@ private fun ActPage(dive: DeepDive, s: DeepDiveSection.Act, show: Boolean, lang:
 }
 
 @Composable
-private fun BridgeVerseCard(b: BridgeVerse, lang: CommentaryLanguage) {
+private fun BridgeVerseCard(b: BridgeVerse) {
     val scale = ReadingSettingsManager.scale
     val shape = RoundedCornerShape(14.dp)
     Column(
@@ -852,7 +842,7 @@ private fun BridgeVerseCard(b: BridgeVerse, lang: CommentaryLanguage) {
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         ArabicText(b.arabic, 22f * scale, DeepDivePalette.cream, lineSpacing = 9f * scale)
-        val translation = b.translation.text(lang)
+        val translation = b.translation.en
         if (translation.isNotEmpty()) {
             SerifText(translation, 16f * scale, Color(0xFFCCCCCC), italic = true)
         }
@@ -867,18 +857,18 @@ private fun BridgeVerseCard(b: BridgeVerse, lang: CommentaryLanguage) {
 }
 
 @Composable
-private fun NarrationPage(s: DeepDiveSection.Narration, show: Boolean, lang: CommentaryLanguage) {
+private fun NarrationPage(s: DeepDiveSection.Narration, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        TagLabel(s.tag.text(lang), show)
+        TagLabel(s.tag.en, show)
         Spacer(modifier = Modifier.height(28.dp))
         Reveal(show, 0.25) {
-            SerifText(s.body.text(lang), 21f * scale, DeepDivePalette.cream, lineSpacing = 8f * scale)
+            SerifText(s.body.en, 21f * scale, DeepDivePalette.cream, lineSpacing = 8f * scale)
         }
         Spacer(modifier = Modifier.height(24.dp))
         Reveal(show, 0.8) {
             Text(
-                text = s.source.text(lang),
+                text = s.source.en,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 2.sp,
@@ -891,7 +881,7 @@ private fun NarrationPage(s: DeepDiveSection.Narration, show: Boolean, lang: Com
         }
         Reveal(show, 1.05) {
             SerifText(
-                s.reflection.text(lang), 16f * scale, DeepDivePalette.mute, italic = true,
+                s.reflection.en, 16f * scale, DeepDivePalette.mute, italic = true,
                 lineSpacing = 4f * scale, modifier = Modifier.widthIn(max = 330.dp)
             )
         }
@@ -904,7 +894,7 @@ private fun NarrationPage(s: DeepDiveSection.Narration, show: Boolean, lang: Com
  * then His words glow.
  */
 @Composable
-private fun ResponsePage(s: DeepDiveSection.Response, show: Boolean, lang: CommentaryLanguage) {
+private fun ResponsePage(s: DeepDiveSection.Response, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Reveal(show, 0.06) {
@@ -935,7 +925,7 @@ private fun ResponsePage(s: DeepDiveSection.Response, show: Boolean, lang: Comme
         Spacer(modifier = Modifier.height(12.dp))
         Reveal(show, 0.18) {
             Text(
-                text = s.replyingTo.text(lang).uppercase(),
+                text = s.replyingTo.en.uppercase(),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 2.sp,
@@ -952,14 +942,14 @@ private fun ResponsePage(s: DeepDiveSection.Response, show: Boolean, lang: Comme
         Spacer(modifier = Modifier.height(20.dp))
         Reveal(show, 0.52) {
             SerifText(
-                s.words.text(lang), 25f * scale, DeepDivePalette.cream, italic = true,
+                s.words.en, 25f * scale, DeepDivePalette.cream, italic = true,
                 lineSpacing = 6f * scale, modifier = Modifier.widthIn(max = 320.dp)
             )
         }
         Spacer(modifier = Modifier.height(22.dp))
         Reveal(show, 0.82) {
             Text(
-                text = s.source.text(lang),
+                text = s.source.en,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 2.sp,
@@ -972,7 +962,7 @@ private fun ResponsePage(s: DeepDiveSection.Response, show: Boolean, lang: Comme
         }
         Reveal(show, 1.0) {
             Text(
-                text = s.reflection.text(lang),
+                text = s.reflection.en,
                 fontSize = 15.sp * scale,
                 lineHeight = 21.sp * scale,
                 textAlign = TextAlign.Center,
@@ -984,14 +974,14 @@ private fun ResponsePage(s: DeepDiveSection.Response, show: Boolean, lang: Comme
 }
 
 @Composable
-private fun ClimaxPage(s: DeepDiveSection.Climax, show: Boolean, lang: CommentaryLanguage) {
+private fun ClimaxPage(s: DeepDiveSection.Climax, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        TagLabel(s.tag.text(lang), show)
+        TagLabel(s.tag.en, show)
         Spacer(modifier = Modifier.height(26.dp))
         Reveal(show, 0.2) {
             Text(
-                text = s.body.text(lang),
+                text = s.body.en,
                 fontSize = 15.sp * scale,
                 lineHeight = 21.sp * scale,
                 textAlign = TextAlign.Center,
@@ -1003,7 +993,7 @@ private fun ClimaxPage(s: DeepDiveSection.Climax, show: Boolean, lang: Commentar
         Reveal(show, 0.65) {
             ArabicText(s.arabic, 30f * scale, DeepDivePalette.goldBright, bold = true)
         }
-        val translation = s.translation.text(lang)
+        val translation = s.translation.en
         if (translation.isNotEmpty()) {
             Spacer(modifier = Modifier.height(22.dp))
             Reveal(show, 1.0) {
@@ -1013,7 +1003,7 @@ private fun ClimaxPage(s: DeepDiveSection.Climax, show: Boolean, lang: Commentar
         Spacer(modifier = Modifier.height(16.dp))
         Reveal(show, 1.0) {
             Text(
-                text = s.source.text(lang),
+                text = s.source.en,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 2.sp,
@@ -1026,7 +1016,7 @@ private fun ClimaxPage(s: DeepDiveSection.Climax, show: Boolean, lang: Commentar
         }
         Reveal(show, 1.35) {
             Text(
-                text = s.reflection.text(lang),
+                text = s.reflection.en,
                 fontSize = 15.sp * scale,
                 lineHeight = 21.sp * scale,
                 textAlign = TextAlign.Center,
@@ -1038,23 +1028,23 @@ private fun ClimaxPage(s: DeepDiveSection.Climax, show: Boolean, lang: Commentar
 }
 
 @Composable
-private fun ReflectionPage(s: DeepDiveSection.ReflectionPrompt, show: Boolean, lang: CommentaryLanguage) {
+private fun ReflectionPage(s: DeepDiveSection.ReflectionPrompt, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Reveal(show) {
             Text(text = "✦", fontSize = 20.sp, color = DeepDivePalette.gold)
         }
         Spacer(modifier = Modifier.height(22.dp))
-        Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream) }
+        Reveal(show, 0.15) { SerifText(s.prompt.en, 34f, DeepDivePalette.cream) }
         Spacer(modifier = Modifier.height(16.dp))
         Reveal(show, 0.35) {
             SerifText(
-                s.subline.text(lang), 16f * scale, Color(0xFFA8A8A8), italic = true,
+                s.subline.en, 16f * scale, Color(0xFFA8A8A8), italic = true,
                 lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 340.dp)
             )
         }
         Spacer(modifier = Modifier.height(34.dp))
-        Bob(s.nextLabel.text(lang), show)
+        Bob(s.nextLabel.en, show)
     }
 }
 
@@ -1063,7 +1053,6 @@ private fun DuaPage(
     dive: DeepDive,
     s: DeepDiveSection.Dua,
     show: Boolean,
-    lang: CommentaryLanguage,
     saidAmin: Boolean,
     onSayAmin: () -> Unit,
     onBeginAgain: () -> Unit
@@ -1072,7 +1061,7 @@ private fun DuaPage(
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Reveal(show) {
             Text(
-                text = s.tag.text(lang).uppercase(),
+                text = s.tag.en.uppercase(),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 3.4.sp,
@@ -1083,7 +1072,7 @@ private fun DuaPage(
         Spacer(modifier = Modifier.height(22.dp))
         Reveal(show, 0.15) {
             SerifText(
-                s.intro.text(lang), 16f * scale, Color(0xFFA8A8A8), italic = true,
+                s.intro.en, 16f * scale, Color(0xFFA8A8A8), italic = true,
                 lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 340.dp)
             )
         }
@@ -1093,7 +1082,7 @@ private fun DuaPage(
         }
         Spacer(modifier = Modifier.height(18.dp))
         Reveal(show, 0.5) { DuaListenButton(arabic = s.arabic) }
-        val translation = s.translation.text(lang)
+        val translation = s.translation.en
         if (translation.isNotEmpty()) {
             Spacer(modifier = Modifier.height(22.dp))
             Reveal(show, 0.72) {
@@ -1106,7 +1095,7 @@ private fun DuaPage(
         Spacer(modifier = Modifier.height(16.dp))
         Reveal(show, 0.72) {
             Text(
-                text = s.source.text(lang),
+                text = s.source.en,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.sp,
@@ -1119,7 +1108,7 @@ private fun DuaPage(
         }
         Reveal(show, 0.98) {
             Text(
-                text = s.note.text(lang),
+                text = s.note.en,
                 fontSize = 14.sp * scale,
                 lineHeight = 20.sp * scale,
                 textAlign = TextAlign.Center,
@@ -1128,7 +1117,7 @@ private fun DuaPage(
             )
         }
         Spacer(modifier = Modifier.height(30.dp))
-        AminBlock(dive.endLine, s.close.text(lang), show, saidAmin, onSayAmin, onBeginAgain, scale)
+        AminBlock(dive.endLine, s.close.en, show, saidAmin, onSayAmin, onBeginAgain, scale)
     }
 }
 
@@ -1196,26 +1185,25 @@ private fun AminBlock(
 private fun ClosingPage(
     s: DeepDiveSection.Closing,
     show: Boolean,
-    lang: CommentaryLanguage,
     onReadSurah: (() -> Unit)?,
     onClose: () -> Unit
 ) {
     val scale = ReadingSettingsManager.scale
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        TagLabel(s.tag.text(lang), show)
+        TagLabel(s.tag.en, show)
         Spacer(modifier = Modifier.height(26.dp))
         Reveal(show, 0.2) { ArabicText(s.titleAr, 56f, DeepDivePalette.goldBright) }
         Spacer(modifier = Modifier.height(20.dp))
         Reveal(show, 0.45) {
             SerifText(
-                s.essence.text(lang), 20f * scale, DeepDivePalette.cream, italic = true,
+                s.essence.en, 20f * scale, DeepDivePalette.cream, italic = true,
                 lineSpacing = 5f * scale, modifier = Modifier.widthIn(max = 340.dp)
             )
         }
         Reveal(show, 0.7) { Box(modifier = Modifier.padding(vertical = 26.dp)) { Hairline() } }
         Reveal(show, 0.7) {
             Text(
-                text = s.line.text(lang),
+                text = s.line.en,
                 fontSize = 14.sp * scale,
                 lineHeight = 20.sp * scale,
                 textAlign = TextAlign.Center,
@@ -1239,7 +1227,7 @@ private fun ClosingPage(
                             .padding(horizontal = 26.dp, vertical = 13.dp)
                     ) {
                         Text(
-                            text = JourneyStrings.readTheFullSurah(lang),
+                            text = JourneyStrings.readTheFullSurah,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 1.sp,
@@ -1255,7 +1243,7 @@ private fun ClosingPage(
                         .padding(horizontal = 22.dp, vertical = 11.dp)
                 ) {
                     Text(
-                        text = JourneyStrings.done(lang),
+                        text = JourneyStrings.done,
                         fontSize = 11.sp,
                         letterSpacing = 2.sp,
                         color = DeepDivePalette.gold
@@ -1357,22 +1345,22 @@ private fun CloseResolved(
 
 /** al-Rahman's recurring question: the refrain glows, the reader answers in the taught reply. */
 @Composable
-private fun RefrainPage(s: DeepDiveSection.Refrain, show: Boolean, lang: CommentaryLanguage) {
+private fun RefrainPage(s: DeepDiveSection.Refrain, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     val haptic = LocalHapticFeedback.current
     var answered by rememberSaveable(s.surah, s.ayah) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        TagLabel(s.tag.text(lang), show)
+        TagLabel(s.tag.en, show)
         Spacer(Modifier.height(26.dp))
         Reveal(show, 0.2) { ArabicText(s.arabic, 26f * scale, DeepDivePalette.cream, bold = true, lineSpacing = 12f * scale) }
         Spacer(Modifier.height(20.dp))
         Reveal(show, 0.45) {
-            SerifText(s.translation.text(lang), 19f * scale, Color(0xFFCCCCCC), italic = true, lineSpacing = 4f * scale, modifier = Modifier.widthIn(max = 380.dp))
+            SerifText(s.translation.en, 19f * scale, Color(0xFFCCCCCC), italic = true, lineSpacing = 4f * scale, modifier = Modifier.widthIn(max = 380.dp))
         }
         Spacer(Modifier.height(14.dp))
         Reveal(show, 0.45) { Text(s.reference, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = DeepDivePalette.gold.copy(alpha = 0.85f)) }
         Reveal(show, 0.7) { Box(Modifier.padding(top = 24.dp, bottom = 18.dp)) { Hairline() } }
-        Reveal(show, 0.7) { SerifText(s.intro.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 340.dp)) }
+        Reveal(show, 0.7) { SerifText(s.intro.en, 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 340.dp)) }
         if (answered) {
             Spacer(Modifier.height(24.dp))
             Box(Modifier.width(1.dp).height(22.dp).background(Brush.verticalGradient(listOf(DeepDivePalette.goldBright.copy(alpha = 0f), DeepDivePalette.goldBright.copy(alpha = 0.7f)))))
@@ -1383,15 +1371,15 @@ private fun RefrainPage(s: DeepDiveSection.Refrain, show: Boolean, lang: Comment
             Spacer(Modifier.height(10.dp))
             Text(s.replyTransliteration, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.6.sp, textAlign = TextAlign.Center, color = DeepDivePalette.mute)
             Spacer(Modifier.height(14.dp))
-            SerifText(s.replyTranslation.text(lang), 21f * scale, DeepDivePalette.cream, italic = true, lineSpacing = 5f * scale, modifier = Modifier.widthIn(max = 330.dp))
+            SerifText(s.replyTranslation.en, 21f * scale, DeepDivePalette.cream, italic = true, lineSpacing = 5f * scale, modifier = Modifier.widthIn(max = 330.dp))
             Spacer(Modifier.height(16.dp))
             DuaListenButton(arabic = s.replyArabic)
             s.teachSource?.let {
                 Spacer(Modifier.height(18.dp))
-                Text(it.text(lang), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, textAlign = TextAlign.Center, color = DeepDivePalette.gold.copy(alpha = 0.8f))
+                Text(it.en, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, textAlign = TextAlign.Center, color = DeepDivePalette.gold.copy(alpha = 0.8f))
             }
             Box(Modifier.padding(top = 24.dp, bottom = 18.dp)) { Hairline() }
-            Text(s.reflection.text(lang), fontSize = 15.sp * scale, lineHeight = 21.sp * scale, textAlign = TextAlign.Center, color = DeepDivePalette.mute, modifier = Modifier.widthIn(max = 340.dp))
+            Text(s.reflection.en, fontSize = 15.sp * scale, lineHeight = 21.sp * scale, textAlign = TextAlign.Center, color = DeepDivePalette.mute, modifier = Modifier.widthIn(max = 340.dp))
         } else {
             Reveal(show, 0.95) {
                 Column(
@@ -1412,7 +1400,7 @@ private fun RefrainPage(s: DeepDiveSection.Refrain, show: Boolean, lang: Comment
 
 /** Tawakkul: press and hold the ring (the grip); lifting after it fills IS the release. */
 @Composable
-private fun ReleasePage(s: DeepDiveSection.Release, show: Boolean, lang: CommentaryLanguage) {
+private fun ReleasePage(s: DeepDiveSection.Release, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -1427,14 +1415,14 @@ private fun ReleasePage(s: DeepDiveSection.Release, show: Boolean, lang: Comment
     val core by animateFloatAsState(if (primed) 36f else 14f, tween(500, easing = EaseInOut), label = "releaseCore")
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         if (done) {
-            CloseResolved(s.arabic, s.translation.text(lang), s.reference, s.note.text(lang), s.nextLabel.text(lang))
+            CloseResolved(s.arabic, s.translation.en, s.reference, s.note.en, s.nextLabel.en)
         } else {
             Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (holding) 0.35f else 1f)) }
             Spacer(Modifier.height(20.dp))
-            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (holding) 0.45f else 1f)) }
+            Reveal(show, 0.15) { SerifText(s.prompt.en, 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (holding) 0.45f else 1f)) }
             Spacer(Modifier.height(14.dp))
             Reveal(show, 0.3) {
-                SerifText(if (holding) "Hold it. All of it." else s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp).alpha(if (holding) 0.5f else 1f))
+                SerifText(if (holding) "Hold it. All of it." else s.subline.en, 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp).alpha(if (holding) 0.5f else 1f))
             }
             Spacer(Modifier.height(34.dp))
             Reveal(show, 0.5) {
@@ -1469,7 +1457,7 @@ private fun ReleasePage(s: DeepDiveSection.Release, show: Boolean, lang: Comment
 
 /** Shukr: tap to count blessings; at seven they overrun the finger and cannot be finished. */
 @Composable
-private fun CountPage(s: DeepDiveSection.Count, show: Boolean, lang: CommentaryLanguage) {
+private fun CountPage(s: DeepDiveSection.Count, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     val haptic = LocalHapticFeedback.current
     var taps by remember { mutableStateOf(0) }
@@ -1502,14 +1490,14 @@ private fun CountPage(s: DeepDiveSection.Count, show: Boolean, lang: CommentaryL
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (done) {
-            CloseResolved(s.arabic, s.translation.text(lang), s.reference, s.note.text(lang), s.nextLabel.text(lang))
+            CloseResolved(s.arabic, s.translation.en, s.reference, s.note.en, s.nextLabel.en)
         } else {
             Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (overflow) 0.35f else 1f)) }
             Spacer(Modifier.height(20.dp))
-            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (overflow) 0.4f else 1f)) }
+            Reveal(show, 0.15) { SerifText(s.prompt.en, 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (overflow) 0.4f else 1f)) }
             if (taps == 0) {
                 Spacer(Modifier.height(14.dp))
-                Reveal(show, 0.3) { SerifText(s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
+                Reveal(show, 0.3) { SerifText(s.subline.en, 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
             } else {
                 Spacer(Modifier.height(22.dp))
                 SerifText("$tally", 54f, DeepDivePalette.goldBright)
@@ -1539,7 +1527,7 @@ private fun CountPage(s: DeepDiveSection.Count, show: Boolean, lang: CommentaryL
 
 /** Salah: press and hold; the core sinks to the earth-line (sujud) and, held, the verse resolves. */
 @Composable
-private fun SujudPage(s: DeepDiveSection.Sujud, show: Boolean, lang: CommentaryLanguage) {
+private fun SujudPage(s: DeepDiveSection.Sujud, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -1554,13 +1542,13 @@ private fun SujudPage(s: DeepDiveSection.Sujud, show: Boolean, lang: CommentaryL
     val warmth by animateFloatAsState(if (holding || atBottom) 0.85f else 0f, tween(if (holding && !atBottom) 2200 else 300), label = "sujudWarm")
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         if (done) {
-            CloseResolved(s.arabic, s.translation.text(lang), s.reference, s.note.text(lang), s.nextLabel.text(lang))
+            CloseResolved(s.arabic, s.translation.en, s.reference, s.note.en, s.nextLabel.en)
         } else {
             Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (holding) 0.35f else 1f)) }
             Spacer(Modifier.height(20.dp))
-            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (holding) 0.45f else 1f)) }
+            Reveal(show, 0.15) { SerifText(s.prompt.en, 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (holding) 0.45f else 1f)) }
             Spacer(Modifier.height(14.dp))
-            Reveal(show, 0.3) { SerifText(s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp).alpha(if (holding) 0.5f else 1f)) }
+            Reveal(show, 0.3) { SerifText(s.subline.en, 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp).alpha(if (holding) 0.5f else 1f)) }
             Spacer(Modifier.height(34.dp))
             Reveal(show, 0.5) {
                 Box(
@@ -1606,7 +1594,7 @@ private fun SujudPage(s: DeepDiveSection.Sujud, show: Boolean, lang: CommentaryL
 
 /** Ikhlas: tap each audience-light out; the last will not go out - everything perishes but His Face. */
 @Composable
-private fun ExtinguishPage(s: DeepDiveSection.Extinguish, show: Boolean, lang: CommentaryLanguage) {
+private fun ExtinguishPage(s: DeepDiveSection.Extinguish, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -1617,14 +1605,14 @@ private fun ExtinguishPage(s: DeepDiveSection.Extinguish, show: Boolean, lang: C
     val promptDim = if (flared) 0.35f else (1f - 0.5f * (1f - remaining.toFloat() / extinguishDots.size))
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         if (done) {
-            CloseResolved(s.arabic, s.translation.text(lang), s.reference, s.note.text(lang), s.nextLabel.text(lang))
+            CloseResolved(s.arabic, s.translation.en, s.reference, s.note.en, s.nextLabel.en)
         } else {
             Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (flared) 0.35f else 1f)) }
             Spacer(Modifier.height(20.dp))
-            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream, modifier = Modifier.alpha(promptDim)) }
+            Reveal(show, 0.15) { SerifText(s.prompt.en, 34f, DeepDivePalette.cream, modifier = Modifier.alpha(promptDim)) }
             if (out.isEmpty()) {
                 Spacer(Modifier.height(14.dp))
-                Reveal(show, 0.3) { SerifText(s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
+                Reveal(show, 0.3) { SerifText(s.subline.en, 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
             }
             Spacer(Modifier.height(if (out.isEmpty()) 34.dp else 14.dp))
             Reveal(show, 0.5) {
@@ -1666,7 +1654,7 @@ private fun ExtinguishPage(s: DeepDiveSection.Extinguish, show: Boolean, lang: C
 
 /** Taqwa: a warm forbidden doorway drifts past; withhold - do not touch it - and let it pass. */
 @Composable
-private fun DoorPage(s: DeepDiveSection.Door, show: Boolean, lang: CommentaryLanguage) {
+private fun DoorPage(s: DeepDiveSection.Door, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -1688,14 +1676,14 @@ private fun DoorPage(s: DeepDiveSection.Door, show: Boolean, lang: CommentaryLan
     LaunchedEffect(show) { if (show && !done && !started) { delay(1600); if (!done) startDrift() } }
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         if (done) {
-            CloseResolved(s.arabic, s.translation.text(lang), s.reference, s.note.text(lang), s.nextLabel.text(lang), arabicSize = 27f)
+            CloseResolved(s.arabic, s.translation.en, s.reference, s.note.en, s.nextLabel.en, arabicSize = 27f)
         } else {
             Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (started) 0.5f else 1f)) }
             Spacer(Modifier.height(20.dp))
-            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 33f, DeepDivePalette.cream, modifier = Modifier.alpha(if (started || reached) 0.4f else 1f)) }
+            Reveal(show, 0.15) { SerifText(s.prompt.en, 33f, DeepDivePalette.cream, modifier = Modifier.alpha(if (started || reached) 0.4f else 1f)) }
             if (!started && !reached) {
                 Spacer(Modifier.height(14.dp))
-                Reveal(show, 0.3) { SerifText(s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
+                Reveal(show, 0.3) { SerifText(s.subline.en, 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
             }
             Spacer(Modifier.height(if (started || reached) 18.dp else 30.dp))
             Reveal(show, 0.5) {
@@ -1745,7 +1733,7 @@ private fun DoorGlow() {
 
 /** al-Kisa: light the five names in the order the cloak gathered them; the fifth completes the salawat. */
 @Composable
-private fun SalawatPage(s: DeepDiveSection.Salawat, show: Boolean, lang: CommentaryLanguage) {
+private fun SalawatPage(s: DeepDiveSection.Salawat, show: Boolean) {
     val scale = ReadingSettingsManager.scale
     val haptic = LocalHapticFeedback.current
     var lit by remember { mutableStateOf(0) }
@@ -1760,14 +1748,14 @@ private fun SalawatPage(s: DeepDiveSection.Salawat, show: Boolean, lang: Comment
         if (done) {
             SalawatField(lit = lit, done = true, onTap = {})
             Spacer(Modifier.height(22.dp))
-            CloseResolved(s.arabic, s.translation.text(lang), s.reference.uppercase(), s.note.text(lang), s.nextLabel.text(lang), arabicSize = 26f)
+            CloseResolved(s.arabic, s.translation.en, s.reference.uppercase(), s.note.en, s.nextLabel.en, arabicSize = 26f)
         } else {
             Reveal(show) { Text("✦", fontSize = 20.sp, color = DeepDivePalette.gold, modifier = Modifier.alpha(if (lit > 0) 0.35f else 1f)) }
             Spacer(Modifier.height(20.dp))
-            Reveal(show, 0.15) { SerifText(s.prompt.text(lang), 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (lit > 0) 0.4f else 1f)) }
+            Reveal(show, 0.15) { SerifText(s.prompt.en, 34f, DeepDivePalette.cream, modifier = Modifier.alpha(if (lit > 0) 0.4f else 1f)) }
             if (lit == 0) {
                 Spacer(Modifier.height(14.dp))
-                Reveal(show, 0.3) { SerifText(s.subline.text(lang), 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
+                Reveal(show, 0.3) { SerifText(s.subline.en, 16f * scale, Color(0xFFB8B8B8), italic = true, lineSpacing = 3f * scale, modifier = Modifier.widthIn(max = 320.dp)) }
             }
             Spacer(Modifier.height(if (lit == 0) 30.dp else 14.dp))
             Reveal(show, 0.5) { SalawatField(lit = lit, done = false, onTap = { tap() }) }
@@ -1874,7 +1862,6 @@ private fun ThresholdCover(art: Int, coverAlpha: Float) {
 private fun DescentVeilPage(
     art: Int?,
     dive: DeepDive,
-    lang: CommentaryLanguage,
     show: Boolean,
     onUnlock: () -> Unit
 ) {
@@ -1891,7 +1878,7 @@ private fun DescentVeilPage(
         ) {
             Reveal(show) {
                 Text(
-                    text = JourneyStrings.premium(lang).uppercase(),
+                    text = JourneyStrings.premium.uppercase(),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 4.sp,
@@ -1906,7 +1893,7 @@ private fun DescentVeilPage(
             Reveal(show, 0.6) { Box(modifier = Modifier.padding(vertical = 26.dp)) { Hairline() } }
             Reveal(show, 0.6) {
                 Text(
-                    text = JourneyStrings.premiumDescentNote(lang),
+                    text = JourneyStrings.premiumDescentNote,
                     fontSize = 14.sp,
                     lineHeight = 20.sp,
                     textAlign = TextAlign.Center,
@@ -1928,7 +1915,7 @@ private fun DescentVeilPage(
                         .padding(horizontal = 28.dp, vertical = 14.dp)
                 ) {
                     Text(
-                        text = JourneyStrings.unlockPremium(lang),
+                        text = JourneyStrings.unlockPremium,
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 1.sp,

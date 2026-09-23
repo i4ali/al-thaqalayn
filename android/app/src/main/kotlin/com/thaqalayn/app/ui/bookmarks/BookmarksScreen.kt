@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,9 +43,10 @@ import com.thaqalayn.app.ui.components.PhosphorIcon
 import com.thaqalayn.app.ui.components.ThemedBackground
 import com.thaqalayn.app.ui.components.pressable
 import com.thaqalayn.app.ui.theme.AmiriFamily
+import com.thaqalayn.app.ui.theme.CormorantFamily
 import com.thaqalayn.app.ui.theme.Theme
 
-/** Saved verses (iOS BookmarksView), local-only on Android. */
+/** Saved verses and passages (iOS BookmarksView), local-only on Android. */
 @Composable
 fun BookmarksScreen(navController: NavHostController) {
     val colors = Theme.colors
@@ -85,7 +87,7 @@ fun BookmarksScreen(navController: NavHostController) {
                 )
             ) {
                 item {
-                    EmHeading(eyebrow = "Saved Verses", title = "Bookmarks")
+                    EmHeading(eyebrow = "Saved Verses & Passages", title = "Bookmarks")
                 }
                 item {
                     EmDivider(label = "${bookmarks.size} of ${BookmarkManager.BOOKMARK_LIMIT}")
@@ -107,7 +109,7 @@ fun BookmarksScreen(navController: NavHostController) {
                                 color = colors.secondaryText
                             )
                             Text(
-                                "Tap the heart on any verse to save it here.",
+                                "Tap the heart on a verse or a passage to save it for later reading.",
                                 fontSize = 14.sp,
                                 color = colors.tertiaryText,
                                 textAlign = TextAlign.Center
@@ -143,7 +145,11 @@ private fun BookmarkCard(bookmark: Bookmark, onOpen: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "${bookmark.surahName.uppercase()} · ${bookmark.verseReference}",
+                text = listOfNotNull(
+                    bookmark.passageIndex?.let { "PASSAGE $it" },
+                    bookmark.surahName.uppercase(),
+                    bookmark.referenceLabel
+                ).joinToString(" · "),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.2.sp,
@@ -160,24 +166,63 @@ private fun BookmarkCard(bookmark: Bookmark, onOpen: () -> Unit) {
                     .padding(5.dp)
             )
         }
-        Text(
-            text = bookmark.verseText,
-            fontFamily = AmiriFamily,
-            fontSize = 20.sp,
-            lineHeight = 34.sp,
-            color = colors.primaryText,
-            textAlign = TextAlign.End,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            text = translation,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            color = colors.secondaryText,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
+        if (bookmark.isPassage) {
+            // A passage is identified by its title; its first verse's Arabic alone
+            // would read as a bookmark of that verse.
+            Text(
+                text = translation,
+                fontFamily = CormorantFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 19.sp,
+                color = colors.primaryText,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            bookmark.passageMetaLabel?.let {
+                Text(text = it, fontSize = 12.5.sp, fontWeight = FontWeight.Medium, color = colors.tertiaryText)
+            }
+        } else {
+            Text(
+                text = bookmark.verseText,
+                fontFamily = AmiriFamily,
+                fontSize = 20.sp,
+                lineHeight = 34.sp,
+                color = colors.primaryText,
+                textAlign = TextAlign.End,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = translation,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = colors.secondaryText,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * The 34dp gradient badge on a bookmark card: a heart for a verse, the passage
+ * glyph for a whole passage (iOS BookmarkKindBadge). Shared with the Today spotlight.
+ */
+@Composable
+fun BookmarkKindBadge(isPassage: Boolean) {
+    val colors = Theme.colors
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(RoundedCornerShape(11.dp))
+            .background(colors.accentGradient),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isPassage) {
+            Text(text = "ع", fontFamily = AmiriFamily, fontSize = 18.sp, color = colors.onAccentText)
+        } else {
+            Icon(Icons.Filled.Favorite, contentDescription = null, tint = colors.onAccentText, modifier = Modifier.size(15.dp))
+        }
     }
 }

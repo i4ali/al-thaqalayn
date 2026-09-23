@@ -151,12 +151,27 @@ data class ProgressStats(
     var versesReadToday: Int = 0,
     var lastReadDate: Long? = null,
     var startDate: Long = 0,
-    var totalSawab: Int = 0
+    var totalSawab: Int = 0,
+    /**
+     * Reading position: the verse at the top of the passage screen as the reader
+     * left it (iOS 8.6). Continue Reading returns here. Null for progress saved
+     * before positions existed; lastReadInfo then falls back to the newest read verse.
+     */
+    var lastReadSurah: Int? = null,
+    var lastReadVerse: Int? = null
 )
 
+/**
+ * Where Continue Reading points. Progress is passages read in that surah; the
+ * passage fields are null until the passage index has loaded.
+ */
 data class LastReadInfo(
     val surahNumber: Int,
     val verseNumber: Int,
+    val passageIndex: Int? = null,
+    val passageTitle: String? = null,
+    val passagesRead: Int = 0,
+    val passagesTotal: Int = 0,
     val progress: Double,
     val updatedAt: Long
 )

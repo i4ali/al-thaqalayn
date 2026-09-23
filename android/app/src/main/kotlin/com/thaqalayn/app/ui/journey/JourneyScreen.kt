@@ -23,25 +23,20 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.thaqalayn.app.data.JourneyDescriptor
 import com.thaqalayn.app.data.JourneyManager
 import com.thaqalayn.app.data.JourneyManagers
-import com.thaqalayn.app.model.CommentaryLanguage
 import com.thaqalayn.app.model.JourneyDay
 import com.thaqalayn.app.premium.PremiumManager
-import com.thaqalayn.app.settings.CommentaryLanguageManager
 import com.thaqalayn.app.ui.Routes
 import com.thaqalayn.app.ui.components.CoverHeaderBand
 import com.thaqalayn.app.ui.components.EmCard
@@ -60,12 +55,10 @@ import com.thaqalayn.app.ui.theme.Theme
  */
 @Composable
 fun JourneyScreen(journeyId: String, navController: NavHostController) {
-    val lang = CommentaryLanguageManager.selectedLanguage
     val manager = JourneyManagers.byId(journeyId) ?: return
     val descriptor = JourneyDescriptor.byId(journeyId) ?: return
     val config = journeyUiConfig(journeyId)
     val currentDay = remember(journeyId) { config.currentDay() }
-    val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     Box(modifier = Modifier.fillMaxSize()) {
         ThemedBackground()
@@ -79,40 +72,37 @@ fun JourneyScreen(journeyId: String, navController: NavHostController) {
                     manager = manager,
                     descriptor = descriptor,
                     config = config,
-                    lang = lang,
                     onBack = { navController.popBackStack() }
                 )
             }
 
             if (manager.isLoading) {
-                item { JourneyLoading(lang) }
+                item { JourneyLoading() }
             } else if (manager.errorMessage != null) {
-                item { JourneyError(manager.errorMessage ?: "", lang) }
+                item { JourneyError(manager.errorMessage ?: "") }
             } else {
                 items(count = manager.days.size, key = { manager.days[it].id }) { index ->
                     val day = manager.days[index]
-                    CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                        JourneyDayRow(
-                            day = day,
-                            config = config,
-                            lang = lang,
-                            isDone = manager.isDayCompleted(day.dayNumber),
-                            isCurrent = currentDay == day.dayNumber,
-                            isLocked = !PremiumManager.canAccessJourneyDay(day.dayNumber),
-                            modifier = Modifier.padding(horizontal = 20.dp),
-                            onTap = {
-                                if (PremiumManager.canAccessJourneyDay(day.dayNumber)) {
-                                    navController.navigate(Routes.journeyDay(journeyId, day.dayNumber))
-                                } else {
-                                    // Locked days open the veiled preview, not
-                                    // the bare paywall (iOS VeiledDayPreview).
-                                    navController.navigate(
-                                        Routes.journeyDayPreview(journeyId, day.dayNumber)
-                                    )
-                                }
+                    JourneyDayRow(
+                        day = day,
+                        config = config,
+                        isDone = manager.isDayCompleted(day.dayNumber),
+                        isCurrent = currentDay == day.dayNumber,
+                        isLocked = !PremiumManager.canAccessJourneyDay(day.dayNumber),
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        onTap = {
+                            if (PremiumManager.canAccessJourneyDay(day.dayNumber)) {
+                                navController.navigate(Routes.journeyDay(journeyId, day.dayNumber))
+                            } else {
+                                // Locked days open the veiled preview, not
+                                // the bare paywall (iOS VeiledDayPreview).
+                                navController.navigate(
+                                    Routes.journeyDayPreview(journeyId, day.dayNumber)
+                                )
                             }
-                        )
-                    }
+                        }
+                    )
+
                 }
             }
         }
@@ -125,22 +115,21 @@ private fun JourneyHeader(
     manager: JourneyManager,
     descriptor: JourneyDescriptor,
     config: JourneyUiConfig,
-    lang: CommentaryLanguage,
     onBack: () -> Unit
 ) {
     val colors = Theme.colors
-    val statusLine = descriptor.statusLine().ifEmpty { JourneyStrings.screenTitle(config.id, lang) }
+    val statusLine = descriptor.statusLine().ifEmpty { JourneyStrings.screenTitle(config.id) }
     val countLine = when {
         config.usesStations ->
-            JourneyStrings.stationsObserved(manager.completedDaysCount, manager.totalDays, lang)
+            JourneyStrings.stationsObserved(manager.completedDaysCount, manager.totalDays)
         config.isObservance ->
-            JourneyStrings.daysObserved(manager.completedDaysCount, manager.totalDays, lang)
+            JourneyStrings.daysObserved(manager.completedDaysCount, manager.totalDays)
         else ->
-            JourneyStrings.daysCompleted(manager.completedDaysCount, manager.totalDays, lang)
+            JourneyStrings.daysCompleted(manager.completedDaysCount, manager.totalDays)
     }
     val completionNote =
         if (!config.isObservance && manager.isJourneyCompleted)
-            JourneyStrings.journeyCompleteNote(config.id, lang)
+            JourneyStrings.journeyCompleteNote(config.id)
         else null
     val percent = manager.completionPercentage
 
@@ -154,143 +143,141 @@ private fun JourneyHeader(
             CoverHeaderBand(art = config.coverRes, height = 320.dp)
         }
 
-        val direction = if (lang.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr
-        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            Column(
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(top = 6.dp, bottom = 16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(if (hasCover) Color.Black.copy(alpha = 0.3f) else Color.Transparent)
+                    .border(1.dp, colors.strokeColor, CircleShape)
+                    .pressable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = colors.primaryText,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 6.dp, bottom = 16.dp)
+                    .padding(top = 12.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(if (hasCover) Color.Black.copy(alpha = 0.3f) else Color.Transparent)
-                        .border(1.dp, colors.strokeColor, CircleShape)
-                        .pressable(onClick = onBack),
-                    contentAlignment = Alignment.Center
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = colors.primaryText,
-                        modifier = Modifier.size(16.dp)
+                    Text(
+                        text = descriptor.eyebrow.uppercase(),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 3.sp,
+                        color = colors.accentColor
+                    )
+                    Text(
+                        text = JourneyStrings.title(config.id),
+                        fontFamily = CormorantFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 40.sp,
+                        lineHeight = 44.sp,
+                        color = colors.primaryText
                     )
                 }
+                EmIconChip(icon = config.icon, size = 56.dp)
+            }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
+            // Over art: wider heading gap + deep-emerald backing keeps the
+            // card text legible. Plain header: tighter 18dp, no backing.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = if (hasCover) 30.dp else 18.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        if (hasCover) Color(0xFF06120E).copy(alpha = 0.45f) else Color.Transparent
+                    )
+            ) {
+                EmCard(modifier = Modifier.fillMaxWidth(), glow = true) {
                     Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = JourneyStrings.eyebrow(config.id, descriptor.eyebrow, lang).uppercase(),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 3.sp,
-                            color = colors.accentColor
-                        )
-                        Text(
-                            text = JourneyStrings.title(config.id, lang),
-                            fontFamily = CormorantFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 40.sp,
-                            lineHeight = 44.sp,
-                            color = colors.primaryText
-                        )
-                    }
-                    EmIconChip(icon = config.icon, size = 56.dp)
-                }
-
-                // Over art: wider heading gap + deep-emerald backing keeps the
-                // card text legible. Plain header: tighter 18dp, no backing.
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = if (hasCover) 30.dp else 18.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            if (hasCover) Color(0xFF06120E).copy(alpha = 0.45f) else Color.Transparent
-                        )
-                ) {
-                    EmCard(modifier = Modifier.fillMaxWidth(), glow = true) {
-                        Column(
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Text(
+                                    text = statusLine,
+                                    fontSize = 12.sp,
+                                    color = colors.secondaryText
+                                )
+                                Text(
+                                    text = countLine,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.primaryText
+                                )
+                            }
+                            Text(
+                                text = "${(percent * 100).toInt()}%",
+                                fontFamily = CormorantFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 30.sp,
+                                color = colors.accentBright
+                            )
+                        }
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(18.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                                .height(5.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.08f))
                         ) {
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                                ) {
-                                    Text(
-                                        text = statusLine,
-                                        fontSize = 12.sp,
-                                        color = colors.secondaryText
-                                    )
-                                    Text(
-                                        text = countLine,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = colors.primaryText
-                                    )
-                                }
-                                Text(
-                                    text = "${(percent * 100).toInt()}%",
-                                    fontFamily = CormorantFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 30.sp,
-                                    color = colors.accentBright
-                                )
-                            }
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
+                                    .fillMaxWidth(percent.coerceIn(0f, 1f))
                                     .height(5.dp)
                                     .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .background(colors.accentGradient)
+                            )
+                        }
+                        if (completionNote != null) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(7.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth(percent.coerceIn(0f, 1f))
-                                        .height(5.dp)
-                                        .clip(CircleShape)
-                                        .background(colors.accentGradient)
+                                Icon(
+                                    Icons.Filled.Verified,
+                                    contentDescription = null,
+                                    tint = colors.semanticGreen,
+                                    modifier = Modifier.size(13.dp)
                                 )
-                            }
-                            if (completionNote != null) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(7.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Verified,
-                                        contentDescription = null,
-                                        tint = colors.semanticGreen,
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Text(
-                                        text = completionNote,
-                                        fontSize = 12.5.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = colors.semanticGreen
-                                    )
-                                }
+                                Text(
+                                    text = completionNote,
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.semanticGreen
+                                )
                             }
                         }
                     }
                 }
             }
         }
+
     }
 }
 
@@ -303,7 +290,6 @@ private fun JourneyHeader(
 internal fun JourneyDayRow(
     day: JourneyDay,
     config: JourneyUiConfig,
-    lang: CommentaryLanguage,
     isDone: Boolean,
     isCurrent: Boolean,
     isLocked: Boolean,
@@ -314,8 +300,8 @@ internal fun JourneyDayRow(
     val shape = RoundedCornerShape(20.dp)
     val highlighted = isCurrent && !isLocked
     val dayLabel =
-        if (config.usesStations) JourneyStrings.stationN(day.dayNumber, lang)
-        else JourneyStrings.dayN(day.dayNumber, lang)
+        if (config.usesStations) JourneyStrings.stationN(day.dayNumber)
+        else JourneyStrings.dayN(day.dayNumber)
 
     Row(
         modifier = modifier
@@ -382,7 +368,7 @@ internal fun JourneyDayRow(
                 )
                 if (isLocked) {
                     Text(
-                        text = JourneyStrings.premium(lang).uppercase(),
+                        text = JourneyStrings.premium.uppercase(),
                         fontSize = 8.5.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
@@ -396,7 +382,7 @@ internal fun JourneyDayRow(
                 }
             }
             Text(
-                text = day.localizedTheme(lang),
+                text = day.theme,
                 fontFamily = CormorantFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 21.sp,
@@ -416,7 +402,7 @@ internal fun JourneyDayRow(
 }
 
 @Composable
-private fun JourneyLoading(lang: CommentaryLanguage) {
+private fun JourneyLoading() {
     val colors = Theme.colors
     Column(
         modifier = Modifier
@@ -427,7 +413,7 @@ private fun JourneyLoading(lang: CommentaryLanguage) {
     ) {
         CircularProgressIndicator(color = colors.accentColor)
         Text(
-            text = JourneyStrings.loadingJourney(lang),
+            text = JourneyStrings.loadingJourney,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = colors.secondaryText
@@ -436,7 +422,7 @@ private fun JourneyLoading(lang: CommentaryLanguage) {
 }
 
 @Composable
-private fun JourneyError(message: String, lang: CommentaryLanguage) {
+private fun JourneyError(message: String) {
     val colors = Theme.colors
     Column(
         modifier = Modifier
@@ -446,7 +432,7 @@ private fun JourneyError(message: String, lang: CommentaryLanguage) {
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
-            text = JourneyStrings.errorLoadingJourney(lang),
+            text = JourneyStrings.errorLoadingJourney,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = colors.primaryText

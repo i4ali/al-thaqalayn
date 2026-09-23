@@ -28,16 +28,7 @@ data class JourneyDay(
     val themeUr: String,
     val tafsirFocusUr: String,
     val reflectionUr: String
-) {
-    fun localizedTheme(lang: CommentaryLanguage): String =
-        if (lang == CommentaryLanguage.URDU) themeUr else theme
-
-    fun localizedTafsir(lang: CommentaryLanguage): String =
-        if (lang == CommentaryLanguage.URDU) tafsirFocusUr else tafsirFocus
-
-    fun localizedReflection(lang: CommentaryLanguage): String =
-        if (lang == CommentaryLanguage.URDU) reflectionUr else reflection
-}
+)
 
 @Serializable
 data class JourneyDua(
@@ -50,13 +41,7 @@ data class JourneyDua(
     /** Full text for the "Read the full ziyarat" disclosure (Arbaeen station 8 only). */
     val fullArabic: String? = null,
     val fullEnglish: String? = null
-) {
-    fun localizedEnglish(lang: CommentaryLanguage): String =
-        if (lang == CommentaryLanguage.URDU) englishUr else english
-
-    fun localizedSource(lang: CommentaryLanguage): String? =
-        if (lang == CommentaryLanguage.URDU) sourceUr ?: source else source
-}
+)
 
 @Serializable
 data class JourneyVerse(
@@ -65,10 +50,7 @@ data class JourneyVerse(
     val verseNumber: Int,
     val relevanceNote: String,
     val relevanceNoteUr: String
-) {
-    fun localizedNote(lang: CommentaryLanguage): String =
-        if (lang == CommentaryLanguage.URDU) relevanceNoteUr else relevanceNote
-}
+)
 
 /**
  * Per-journey completion state, persisted per Islamic year (iOS
